@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+import gzip
 import io
 import json
 import sys
@@ -157,6 +158,8 @@ def write_outputs(rows: list[dict[str, str]], output: Path) -> None:
         writer = csv.DictWriter(file, fieldnames=OUTPUT_COLUMNS)
         writer.writeheader()
         writer.writerows(rows)
+    gzip_path = output.with_name(output.name + ".gz")
+    gzip_path.write_bytes(gzip.compress(output.read_bytes(), compresslevel=9, mtime=0))
 
     metadata = {
         "game": GAME_NAME,
