@@ -11,6 +11,7 @@ python collect_data.py
 輸出：
 
 - `data/daily_cash.csv`：每期開獎日期、5 個獎號、銷售與獎金資料
+- `data/daily_cash.csv.gz`：相同資料的壓縮版本
 - `data/daily_cash.metadata.json`：來源、蒐集時間、筆數及日期範圍
 
 資料來源：[台灣彩券各期開獎結果資料下載](https://www.taiwanlottery.com/lotto/history/result_download/)。年度檔依官方說明每月 5 日更新至前一個月；程式另以官方查詢 API 補齊最近兩個月。
