@@ -70,7 +70,19 @@ function selectGame(gameKey) {
   document.querySelector("#quick-pick-result").innerHTML = "<p>按下按鈕，產生你的隨機號碼</p>";
   document.querySelector("#generated-time").textContent = "";
   updateAiAvailability();
+  resetAiResults();
   document.querySelector("#quick-pick").scrollIntoView({ behavior: "smooth", block: "center" });
+}
+
+function resetAiResults() {
+  const message = selectedGame === "daily539"
+    ? "按下按鈕產生策略。"
+    : "目前策略選號僅支援今彩 539。";
+  document.querySelector("#ai-results").innerHTML = `
+    <div class="ai-empty-state">
+      <span aria-hidden="true">AI</span>
+      <p>${message}</p>
+    </div>`;
 }
 
 function getDrawNumbers(draw) {
@@ -131,7 +143,9 @@ function weightedPick(ranked, count) {
 function buildAiPicks(draws) {
   const ranked = rankByFrequency(draws);
   const hot = ranked.map(({ number }) => number);
-  const cold = [...ranked].reverse().map(({ number }) => number);
+  const cold = [...ranked]
+    .sort((a, b) => a.count - b.count || a.number - b.number)
+    .map(({ number }) => number);
   const recentRanked = rankByFrequency(draws.slice(-60));
   const recent = recentRanked.map(({ number }) => number);
   const priorCounts = new Map(calculateFrequency(draws.slice(-120, -60)).map(({ number, count }) => [number, count]));
@@ -214,6 +228,47 @@ function calculateFrequency(draws) {
   return [...frequencies].map(([number, count]) => ({ number, count }));
 }
 
+function calculatePairFrequency(draws) {
+  const pairs = [];
+  const pairByKey = new Map();
+  for (let first = 1; first <= 38; first += 1) {
+    for (let second = first + 1; second <= 39; second += 1) {
+      const pair = { first, second, count: 0 };
+      pairs.push(pair);
+      pairByKey.set(`${first}-${second}`, pair);
+    }
+  }
+
+  draws.forEach((draw) => {
+    const numbers = [...new Set(getDrawNumbers(draw))].sort((a, b) => a - b);
+    for (let firstIndex = 0; firstIndex < numbers.length - 1; firstIndex += 1) {
+      for (let secondIndex = firstIndex + 1; secondIndex < numbers.length; secondIndex += 1) {
+        pairByKey.get(`${numbers[firstIndex]}-${numbers[secondIndex]}`).count += 1;
+      }
+    }
+  });
+
+  return pairs.sort((a, b) => b.count - a.count || a.first - b.first || a.second - b.second);
+}
+
+function renderPairAnalysis(draws) {
+  const pairs = calculatePairFrequency(draws);
+  document.querySelector("#pair-draw-count").textContent = draws.length.toLocaleString("zh-TW");
+  document.querySelector("#pair-ranking-body").innerHTML = pairs.slice(0, 10).map((pair, index) => `
+    <tr>
+      <td class="pair-rank">${String(index + 1).padStart(2, "0")}</td>
+      <td><span class="pair-ball">${String(pair.first).padStart(2, "0")}</span></td>
+      <td><span class="pair-ball">${String(pair.second).padStart(2, "0")}</span></td>
+      <td>${pair.count.toLocaleString("zh-TW")} 次</td>
+      <td>${(pair.count / draws.length * 100).toFixed(2)}%</td>
+    </tr>`).join("");
+}
+
+function renderPairError(message) {
+  document.querySelector("#pair-draw-count").textContent = "—";
+  document.querySelector("#pair-ranking-body").innerHTML = `<tr><td class="pair-error" colspan="5">${message}</td></tr>`;
+}
+
 function renderRanking(element, numbers, highestCount) {
   element.innerHTML = numbers
     .map(({ number, count }, index) => {
@@ -254,6 +309,7 @@ async function loadStatistics() {
 
     renderRanking(hotElement, hotNumbers, highestCount);
     renderRanking(coldElement, coldNumbers, highestCount);
+    renderPairAnalysis(draws);
 
     document.querySelector("#draw-count").textContent = draws.length.toLocaleString("zh-TW");
     document.querySelector("#date-range").textContent = `${formatDate(draws[0].draw_date)}–${formatDate(draws.at(-1).draw_date)}`;
@@ -263,6 +319,7 @@ async function loadStatistics() {
     coldElement.innerHTML = message;
     document.querySelector("#date-range").textContent = "暫時無法取得";
     document.querySelector("#ai-availability").textContent = "歷史資料讀取失敗，暫時無法使用 AI 選號。";
+    renderPairError(error.message || "同期雙號資料暫時無法取得。");
   }
 }
 
