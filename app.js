@@ -14,10 +14,13 @@ const GAME_RULES = {
   threeStar: { name: "3 星彩", rule: "百、十、個位各取 0–9 一個數字", digits: 3 },
   fourStar: { name: "4 星彩", rule: "千、百、十、個位各取 0–9 一個數字", digits: 4 },
   bingo: { name: "BINGO BINGO 10 星", rule: "01–80 選 10 個不重複號碼", groups: [{ count: 10, max: 80 }] },
+  markSix39: { name: "39 樂合彩（二合）", rule: "01–39 選 2 個不重複號碼", groups: [{ count: 2, max: 39 }] },
+  markSix49: { name: "49 樂合彩（二合）", rule: "01–49 選 2 個不重複號碼", groups: [{ count: 2, max: 49 }] },
 };
 
-let selectedGame = "daily539";
+let selectedGame = null;
 let historicalDraws = [];
+let selectedStatsRange = "all";
 
 function secureRandomInt(max) {
   const range = 0x100000000;
@@ -43,6 +46,7 @@ function renderPickGroup(numbers, { label = "", secondary = false, digits = fals
 function generateNumbers() {
   const game = GAME_RULES[selectedGame];
   const result = document.querySelector("#quick-pick-result");
+  if (!game || selectedGame === "bingo") return;
 
   if (game.digits) {
     const digits = Array.from({ length: game.digits }, () => secureRandomInt(10));
@@ -54,12 +58,16 @@ function generateNumbers() {
       .join("");
   }
 
-  document.querySelector("#generated-time").textContent = `產生時間 ${new Intl.DateTimeFormat("zh-TW", { hour: "2-digit", minute: "2-digit", second: "2-digit" }).format(new Date())}`;
 }
 
 function selectGame(gameKey) {
   selectedGame = gameKey;
   const game = GAME_RULES[gameKey];
+  const hasFullGamePage = gameKey === "daily539";
+  const supportsQuickPick = gameKey !== "bingo";
+  document.querySelectorAll(".game-feature").forEach((element) => {
+    element.hidden = hasFullGamePage ? false : !(supportsQuickPick && element.id === "quick-pick");
+  });
   document.querySelectorAll(".game-card").forEach((card) => {
     const isSelected = card.dataset.game === gameKey;
     card.classList.toggle("selected", isSelected);
@@ -68,10 +76,27 @@ function selectGame(gameKey) {
   document.querySelector("#selected-game-name").textContent = game.name;
   document.querySelector("#selected-game-rule").textContent = game.rule;
   document.querySelector("#quick-pick-result").innerHTML = "<p>按下按鈕，產生你的隨機號碼</p>";
-  document.querySelector("#generated-time").textContent = "";
   updateAiAvailability();
   resetAiResults();
-  document.querySelector("#quick-pick").scrollIntoView({ behavior: "smooth", block: "center" });
+  if (hasFullGamePage || supportsQuickPick) {
+    document.querySelector(hasFullGamePage ? "#daily539" : "#quick-pick")
+      .scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+}
+
+function showHome() {
+  selectedGame = null;
+  document.querySelectorAll(".game-card").forEach((card) => {
+    card.classList.remove("selected");
+    card.setAttribute("aria-pressed", "false");
+  });
+  document.querySelectorAll(".game-feature").forEach((element) => {
+    element.hidden = true;
+  });
+  document.querySelector("#quick-pick-result").innerHTML = "<p>按下按鈕，產生你的隨機號碼</p>";
+  resetAiResults();
+  updateAiAvailability();
+  document.querySelector("#top").scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
 function resetAiResults() {
@@ -193,10 +218,12 @@ function updateAiAvailability() {
   const message = document.querySelector("#ai-availability");
   const supportsAi = selectedGame === "daily539";
   button.disabled = !supportsAi || !historicalDraws.length;
-  message.classList.toggle("unavailable", !supportsAi);
-  message.textContent = supportsAi
-    ? (historicalDraws.length ? `已載入 ${historicalDraws.length.toLocaleString("zh-TW")} 期資料，可開始產生。` : "正在載入今彩 539 歷史資料…")
-    : `${GAME_RULES[selectedGame].name} 尚無歷史資料，AI 選號目前僅支援今彩 539。`;
+  message.classList.toggle("unavailable", Boolean(selectedGame) && !supportsAi);
+  message.textContent = !selectedGame
+    ? "請先選擇遊戲。"
+    : supportsAi
+      ? (historicalDraws.length ? `已載入 ${historicalDraws.length.toLocaleString("zh-TW")} 期資料，可開始產生。` : "正在載入今彩 539 歷史資料…")
+      : `${GAME_RULES[selectedGame].name} 尚無歷史資料，AI 選號目前僅支援今彩 539。`;
 }
 
 function generateAiPicks() {
@@ -252,6 +279,10 @@ function calculatePairFrequency(draws) {
 }
 
 function renderPairAnalysis(draws) {
+  if (!draws.length) {
+    renderPairError("所選區間沒有可用資料。");
+    return;
+  }
   const pairs = calculatePairFrequency(draws);
   document.querySelector("#pair-draw-count").textContent = draws.length.toLocaleString("zh-TW");
   document.querySelector("#pair-ranking-body").innerHTML = pairs.slice(0, 10).map((pair, index) => `
@@ -284,9 +315,100 @@ function renderRanking(element, numbers, highestCount) {
     .join("");
 }
 
+function calculateSpecialNumbers(draws) {
+  const latestFirst = [...draws].reverse();
+  const recentDraws = draws.slice(-10);
+  const recentCounts = new Map(calculateFrequency(recentDraws).map(({ number, count }) => [number, count]));
+  const specials = [];
+
+  for (let number = 1; number <= 39; number += 1) {
+    let missed = 0;
+    for (const draw of latestFirst) {
+      if (getDrawNumbers(draw).includes(number)) break;
+      missed += 1;
+    }
+    if (missed >= 3) specials.push({ number, value: missed, rule: `連續 ${missed} 期未開出`, priority: 1 });
+
+    let appeared = 0;
+    for (const draw of latestFirst) {
+      if (!getDrawNumbers(draw).includes(number)) break;
+      appeared += 1;
+    }
+    if (appeared >= 2) specials.push({ number, value: appeared, rule: `連續 ${appeared} 期開出`, priority: 2 });
+
+    const recentCount = recentCounts.get(number) || 0;
+    if (recentDraws.length >= 5 && recentCount >= 3) {
+      specials.push({ number, value: recentCount, rule: `最近 ${recentDraws.length} 期開出 ${recentCount} 次`, priority: 3 });
+    }
+  }
+
+  return specials.sort((a, b) => a.priority - b.priority || b.value - a.value || a.number - b.number);
+}
+
+function renderSpecialNumbers(draws) {
+  const specials = calculateSpecialNumbers(draws);
+  document.querySelector("#special-numbers").innerHTML = specials.length
+    ? specials.map(({ number, rule }) => `
+      <li>
+        <span class="number-ball">${String(number).padStart(2, "0")}</span>
+        <span class="special-rule">${rule}</span>
+      </li>`).join("")
+    : '<li class="loading-row">目前沒有符合特殊規則的號碼。</li>';
+}
+
 function formatDate(dateString) {
   const [year, month, day] = dateString.split("-");
   return `${year}.${month}.${day}`;
+}
+
+function getDrawsForStatsRange(draws, range) {
+  const sortedDraws = [...draws].sort((a, b) =>
+    a.draw_date.localeCompare(b.draw_date)
+    || a.draw_no.localeCompare(b.draw_no, undefined, { numeric: true })
+  );
+  const requestedCount = Number(range);
+  return Number.isInteger(requestedCount) && sortedDraws.length >= requestedCount
+    ? sortedDraws.slice(-requestedCount)
+    : sortedDraws;
+}
+
+function setStatsRangeControlsEnabled(enabled) {
+  document.querySelectorAll(".stats-range-button").forEach((button) => {
+    button.disabled = !enabled;
+  });
+}
+
+function updateStatistics(range = selectedStatsRange) {
+  selectedStatsRange = range;
+  const draws = getDrawsForStatsRange(historicalDraws, range);
+  document.querySelectorAll(".stats-range-button").forEach((button) => {
+    const isSelected = button.dataset.range === String(range);
+    button.classList.toggle("active", isSelected);
+    button.setAttribute("aria-pressed", String(isSelected));
+  });
+
+  if (!draws.length) {
+    const message = "所選區間沒有可用資料。";
+    document.querySelector("#hot-numbers").innerHTML = `<li class="loading-row error-message">${message}</li>`;
+    document.querySelector("#cold-numbers").innerHTML = `<li class="loading-row error-message">${message}</li>`;
+    document.querySelector("#special-numbers").innerHTML = `<li class="loading-row error-message">${message}</li>`;
+    document.querySelector("#draw-count").textContent = "0";
+    document.querySelector("#date-range").textContent = "暫時無資料";
+    renderPairError(message);
+    return;
+  }
+
+  const frequencies = calculateFrequency(draws);
+  const highestCount = Math.max(...frequencies.map(({ count }) => count));
+  const hotNumbers = [...frequencies].sort((a, b) => b.count - a.count || a.number - b.number);
+  const coldNumbers = [...frequencies].sort((a, b) => a.count - b.count || a.number - b.number);
+
+  renderRanking(document.querySelector("#hot-numbers"), hotNumbers, highestCount);
+  renderRanking(document.querySelector("#cold-numbers"), coldNumbers, highestCount);
+  renderSpecialNumbers(draws);
+  renderPairAnalysis(draws);
+  document.querySelector("#draw-count").textContent = draws.length.toLocaleString("zh-TW");
+  document.querySelector("#date-range").textContent = `${formatDate(draws[0].draw_date)}–${formatDate(draws.at(-1).draw_date)}`;
 }
 
 async function loadStatistics() {
@@ -301,30 +423,29 @@ async function loadStatistics() {
     if (!draws.length) throw new Error("歷史資料目前為空");
     historicalDraws = draws;
     updateAiAvailability();
-
-    const frequencies = calculateFrequency(draws);
-    const highestCount = Math.max(...frequencies.map(({ count }) => count));
-    const hotNumbers = [...frequencies].sort((a, b) => b.count - a.count || a.number - b.number).slice(0, 5);
-    const coldNumbers = [...frequencies].sort((a, b) => a.count - b.count || a.number - b.number).slice(0, 5);
-
-    renderRanking(hotElement, hotNumbers, highestCount);
-    renderRanking(coldElement, coldNumbers, highestCount);
-    renderPairAnalysis(draws);
-
-    document.querySelector("#draw-count").textContent = draws.length.toLocaleString("zh-TW");
-    document.querySelector("#date-range").textContent = `${formatDate(draws[0].draw_date)}–${formatDate(draws.at(-1).draw_date)}`;
+    setStatsRangeControlsEnabled(true);
+    updateStatistics("all");
   } catch (error) {
     const message = `<li class="loading-row error-message">${error.message}，請稍後再試。</li>`;
     hotElement.innerHTML = message;
     coldElement.innerHTML = message;
+    document.querySelector("#special-numbers").innerHTML = message;
     document.querySelector("#date-range").textContent = "暫時無法取得";
     document.querySelector("#ai-availability").textContent = "歷史資料讀取失敗，暫時無法使用 AI 選號。";
     renderPairError(error.message || "同期雙號資料暫時無法取得。");
+    setStatsRangeControlsEnabled(false);
   }
 }
 
 document.querySelector("#current-year").textContent = new Date().getFullYear();
 document.querySelectorAll(".game-card").forEach((card) => card.addEventListener("click", () => selectGame(card.dataset.game)));
+document.querySelector("#home-link").addEventListener("click", (event) => {
+  event.preventDefault();
+  showHome();
+});
 document.querySelector("#generate-numbers").addEventListener("click", generateNumbers);
 document.querySelector("#generate-ai-picks").addEventListener("click", generateAiPicks);
+document.querySelectorAll(".stats-range-button").forEach((button) => {
+  button.addEventListener("click", () => updateStatistics(button.dataset.range));
+});
 loadStatistics();

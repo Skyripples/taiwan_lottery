@@ -7,7 +7,7 @@
       name="description"
       content="台灣彩券歷史開獎統計，以公開歷史資料整理今彩 539 熱門與冷門號碼。"
     />
-    <title>彩號研究所｜台灣彩券數據統計</title>
+    <title>台彩研究所｜台灣彩券數據統計</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -19,115 +19,67 @@
   </head>
   <body>
     <header class="site-header">
-      <a class="brand" href="#top" aria-label="彩號研究所首頁">
-        <span class="brand-mark">彩</span>
-        <span>彩號研究所</span>
+      <a class="brand" href="#top" aria-label="台彩研究所首頁">
+        <span>台彩研究所</span>
       </a>
       <nav aria-label="主要導覽">
-        <a href="#games">遊戲總覽</a>
-        <a href="#quick-pick">隨機取號</a>
-        <a href="#ai-pick">AI 選號</a>
-        <a href="#daily539">539 統計</a>
+        <a id="home-link" href="#top">回首頁</a>
       </nav>
     </header>
 
     <main id="top">
-      <section class="hero">
-        <div class="hero-copy">
-          <p class="eyebrow">TAIWAN LOTTERY DATA LAB</p>
-          <h1>從歷史開獎資料，<br /><span>看見號碼的軌跡。</span></h1>
-          <p class="hero-description">
-            用清楚、簡單的方式探索台灣彩券數據。目前聚焦今彩 539，快速掌握歷年最常與最少出現的號碼。
-          </p>
-          <a class="primary-button" href="#daily539">查看 539 統計 <span aria-hidden="true">↓</span></a>
-        </div>
-        <div class="hero-visual" aria-hidden="true">
-          <div class="orbit orbit-one"></div>
-          <div class="orbit orbit-two"></div>
-          <span class="lotto-ball ball-39">39</span>
-          <span class="lotto-ball ball-05">05</span>
-          <span class="lotto-ball ball-22">22</span>
-          <span class="spark spark-one">✦</span>
-          <span class="spark spark-two">✦</span>
-        </div>
-      </section>
-
       <section class="section games-section" id="games">
         <div class="section-heading">
           <div>
             <p class="eyebrow">EXPLORE GAMES</p>
-            <h2>選擇彩券遊戲</h2>
+            <h2>選擇遊戲</h2>
           </div>
-          <p>更多遊戲的歷史數據與分析工具將陸續加入。</p>
         </div>
 
         <div class="game-grid">
-          <button class="game-card featured selected" type="button" data-game="daily539" aria-pressed="true">
-            <span class="game-icon icon-539">539</span>
-            <span class="game-content">
-              <span class="status active">目前主打</span>
-              <strong>今彩 539</strong>
-              <small>每週一至週六開獎，從 01–39 選出 5 個號碼</small>
-            </span>
-            <span class="card-arrow" aria-hidden="true">↗</span>
+          <button class="game-card" type="button" data-game="power638" aria-label="威力彩" aria-pressed="false">
+            <img class="game-logo" src="super_lotto638.svg" alt="" aria-hidden="true" />
           </button>
 
-          <button class="game-card" type="button" data-game="lotto649" aria-pressed="false">
-            <span class="game-icon icon-lotto">大</span>
-            <span class="game-content">
-              <span class="status quick-pick-ready">支援隨機取號</span>
-              <strong>大樂透</strong>
-              <small>第一區 01–49，另開出一個特別號</small>
-            </span>
+          <button class="game-card" type="button" data-game="lotto649" aria-label="大樂透" aria-pressed="false">
+            <img class="game-logo" src="assets/logos/lotto649.svg" alt="" aria-hidden="true" />
           </button>
 
-          <button class="game-card" type="button" data-game="power638" aria-pressed="false">
-            <span class="game-icon icon-power">威</span>
-            <span class="game-content">
-              <span class="status quick-pick-ready">支援隨機取號</span>
-              <strong>威力彩</strong>
-              <small>雙區選號，累積頭獎充滿想像</small>
-            </span>
+          <button class="game-card featured" type="button" data-game="daily539" aria-label="今彩 539" aria-pressed="false">
+            <img class="game-logo" src="assets/logos/daily_cash.svg" alt="" aria-hidden="true" />
           </button>
 
-          <button class="game-card" type="button" data-game="threeStar" aria-pressed="false">
-            <span class="game-icon icon-3star">3</span>
-            <span class="game-content">
-              <span class="status quick-pick-ready">支援隨機取號</span>
-              <strong>3星彩</strong>
-              <small>百位、十位、個位的三位數玩法</small>
-            </span>
+          <button class="game-card" type="button" data-game="markSix39" aria-label="39 樂合彩" aria-pressed="false">
+            <img class="game-logo" src="assets/logos/39_m5.svg" alt="" aria-hidden="true" />
           </button>
 
-          <button class="game-card" type="button" data-game="fourStar" aria-pressed="false">
-            <span class="game-icon icon-4star">4</span>
-            <span class="game-content">
-              <span class="status quick-pick-ready">支援隨機取號</span>
-              <strong>4星彩</strong>
-              <small>千位至個位的四位數玩法</small>
-            </span>
+          <button class="game-card" type="button" data-game="markSix49" aria-label="49 樂合彩" aria-pressed="false">
+            <img class="game-logo" src="assets/logos/49_m6.svg" alt="" aria-hidden="true" />
           </button>
 
-          <button class="game-card" type="button" data-game="bingo" aria-pressed="false">
-            <span class="game-icon icon-bingo">賓</span>
-            <span class="game-content">
-              <span class="status quick-pick-ready">支援隨機取號</span>
-              <strong>BINGO BINGO</strong>
-              <small>每 5 分鐘開獎的電腦型彩券</small>
-            </span>
+          <button class="game-card" type="button" data-game="threeStar" aria-label="3 星彩" aria-pressed="false">
+            <img class="game-logo" src="assets/logos/3_d.svg" alt="" aria-hidden="true" />
+          </button>
+
+          <button class="game-card" type="button" data-game="fourStar" aria-label="4 星彩" aria-pressed="false">
+            <img class="game-logo" src="assets/logos/4_d.svg" alt="" aria-hidden="true" />
+          </button>
+
+          <button class="game-card" type="button" data-game="bingo" aria-label="BINGO BINGO" aria-pressed="false">
+            <img class="game-logo" src="assets/logos/bingo_bingo.svg" alt="" aria-hidden="true" />
           </button>
         </div>
       </section>
 
-      <section class="section quick-pick-section" id="quick-pick">
+      <section class="section quick-pick-section game-feature" id="quick-pick" hidden>
         <div class="quick-pick-copy">
           <p class="eyebrow">QUICK PICK</p>
           <h2>隨機取號</h2>
           <p>先從上方選擇遊戲，再產生一組符合該遊戲規則的隨機號碼。</p>
           <div class="selected-game">
             <span>目前選擇</span>
-            <strong id="selected-game-name">今彩 539</strong>
-            <small id="selected-game-rule">01–39 選 5 個不重複號碼</small>
+            <strong id="selected-game-name">請先選擇遊戲</strong>
+            <small id="selected-game-rule">選擇後將顯示對應取號規則</small>
           </div>
         </div>
 
@@ -136,14 +88,12 @@
             <p>按下按鈕，產生你的隨機號碼</p>
           </div>
           <button class="generate-button" id="generate-numbers" type="button">
-            <span class="dice" aria-hidden="true">◆</span>
             隨機取號
           </button>
-          <p class="generated-time" id="generated-time"></p>
         </div>
       </section>
 
-      <section class="section ai-pick-section" id="ai-pick">
+      <section class="section ai-pick-section game-feature" id="ai-pick" hidden>
         <div class="ai-heading">
           <div>
             <p class="eyebrow">DATA STRATEGY</p>
@@ -164,21 +114,58 @@
         </div>
       </section>
 
-      <section class="section stats-section" id="daily539">
+      <section class="section pair-section game-feature" hidden>
+        <section class="pair-analysis" aria-labelledby="pair-analysis-title">
+          <header class="pair-analysis-header">
+            <div>
+              <p>PAIR FREQUENCY</p>
+              <h3 id="pair-analysis-title">539 同期雙號搭配分析</h3>
+            </div>
+            <p>統計期數 <strong id="pair-draw-count">—</strong></p>
+          </header>
+          <div class="pair-table-wrap">
+            <table class="pair-table">
+              <thead>
+                <tr>
+                  <th scope="col">排名</th>
+                  <th scope="col">第一號</th>
+                  <th scope="col">第二號</th>
+                  <th scope="col">出現次數</th>
+                  <th scope="col">出現比例</th>
+                </tr>
+              </thead>
+              <tbody id="pair-ranking-body">
+                <tr><td class="pair-error" colspan="5">正在分析同期雙號資料…</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p class="pair-note">歷史共同出現比例，不代表下期機率。</p>
+        </section>
+      </section>
+
+      <section class="section stats-section game-feature" id="daily539" hidden>
         <div class="stats-intro">
           <p class="eyebrow">DAILY CASH 539</p>
-          <h2>今彩 539<br />歷年號碼統計</h2>
+          <h2>今彩 539<br />歷年數據統計</h2>
           <p>
             統計每一期的五個中獎號碼，找出累計出現次數最高與最低的號碼。資料更新後，結果會自動重新計算。
           </p>
+          <div class="stats-range-control">
+            <div class="stats-range-options" role="group" aria-label="539 統計區間">
+              <button class="stats-range-button active" type="button" data-range="all" aria-pressed="true" disabled>全部</button>
+              <button class="stats-range-button" type="button" data-range="30" aria-pressed="false" disabled>最近 30 期</button>
+              <button class="stats-range-button" type="button" data-range="60" aria-pressed="false" disabled>60 期</button>
+              <button class="stats-range-button" type="button" data-range="120" aria-pressed="false" disabled>120 期</button>
+            </div>
+          </div>
           <dl class="dataset-summary" aria-label="資料摘要">
             <div>
-              <dt id="draw-count">—</dt>
               <dd>統計期數</dd>
+              <dt id="draw-count">—</dt>
             </div>
             <div>
-              <dt id="date-range">讀取中</dt>
               <dd>資料範圍</dd>
+              <dt id="date-range">讀取中</dt>
             </div>
           </dl>
         </div>
@@ -209,44 +196,31 @@
               <li class="loading-row">正在分析歷史資料…</li>
             </ol>
           </section>
+
+          <section class="ranking-card special">
+            <header>
+              <span class="ranking-icon" aria-hidden="true">✦</span>
+              <div>
+                <p>SPECIAL NUMBERS</p>
+                <h3>特殊</h3>
+              </div>
+            </header>
+            <ul class="number-list special-number-list" id="special-numbers">
+              <li class="loading-row">正在分析歷史資料…</li>
+            </ul>
+          </section>
         </div>
 
-        <section class="pair-analysis" aria-labelledby="pair-analysis-title">
-          <header class="pair-analysis-header">
-            <div>
-              <p>PAIR FREQUENCY</p>
-              <h3 id="pair-analysis-title">539 同期雙號搭配分析</h3>
-            </div>
-            <p>統計期數 <strong id="pair-draw-count">—</strong></p>
-          </header>
-          <div class="pair-table-wrap">
-            <table class="pair-table">
-              <thead>
-                <tr>
-                  <th scope="col">排名</th>
-                  <th scope="col">第一號</th>
-                  <th scope="col">第二號</th>
-                  <th scope="col">出現次數</th>
-                  <th scope="col">出現比例</th>
-                </tr>
-              </thead>
-              <tbody id="pair-ranking-body">
-                <tr><td class="pair-error" colspan="5">正在分析同期雙號資料…</td></tr>
-              </tbody>
-            </table>
-          </div>
-          <p class="pair-note">歷史共同出現比例，不代表下期機率。</p>
-        </section>
       </section>
 
-      <aside class="notice">
+      <aside class="notice game-feature" hidden>
         <span aria-hidden="true">i</span>
         <p><strong>理性提醒</strong>　歷史開獎次數不代表未來中獎機率；每次開獎皆為獨立隨機事件，本網站僅供數據研究與娛樂參考。</p>
       </aside>
     </main>
 
     <footer>
-      <a class="brand footer-brand" href="#top"><span class="brand-mark">彩</span><span>彩號研究所</span></a>
+      <a class="brand footer-brand" href="#top"><span>台彩研究所</span></a>
       <p>資料來源：台灣彩券官方歷史開獎資料</p>
       <p>© <span id="current-year"></span> Lottery Data Lab</p>
     </footer>

@@ -15,6 +15,7 @@
 }
 
 * { box-sizing: border-box; }
+[hidden] { display: none !important; }
 html { scroll-behavior: smooth; }
 body {
   margin: 0;
@@ -92,7 +93,7 @@ h1 span { color: var(--green); }
 .section-heading > p { max-width: 390px; margin-bottom: 5px; color: var(--muted); line-height: 1.8; }
 .game-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
 .game-card {
-  position: relative; min-height: 188px; padding: 27px; display: flex; gap: 20px; align-items: flex-start;
+  position: relative; min-height: 188px; padding: 0; display: flex; align-items: center; justify-content: center; overflow: hidden;
   background: rgba(255,253,250,.72); border: 1px solid rgba(210,208,199,.85); border-radius: 10px;
   color: var(--ink); font: inherit; text-align: left; cursor: pointer;
   transition: transform .2s, border-color .2s, box-shadow .2s, background .2s;
@@ -100,20 +101,15 @@ h1 span { color: var(--green); }
 .game-card:hover { transform: translateY(-4px); border-color: #aebbb5; background: var(--card); }
 .game-card.selected { background: var(--card); border: 2px solid var(--green); box-shadow: var(--shadow); }
 .game-card:focus-visible { outline: 3px solid rgba(12,121,87,.28); outline-offset: 3px; }
-.game-icon {
-  flex: 0 0 auto; width: 58px; height: 58px; display: grid; place-items: center; border-radius: 50%;
-  font: 700 15px "Outfit", sans-serif; color: white; background: #87918d;
-}
-.icon-539 { background: var(--green); }
-.icon-lotto { background: #cc5950; }.icon-power { background: #5b60a9; }
-.icon-3star { background: #cc9345; }.icon-4star { background: #3d87a5; }.icon-bingo { background: #8973a1; }
-.game-content { display: flex; flex-direction: column; align-items: flex-start; }
-.status { margin-bottom: 12px; padding: 4px 8px; color: #7d8581; background: #e3e3df; border-radius: 3px; font-size: 10px; font-weight: 700; letter-spacing: .08em; }
-.status.active { color: var(--green); background: var(--green-soft); }
-.status.quick-pick-ready { color: #68736e; background: #e3e3df; }
-.game-content strong { margin-bottom: 8px; font-size: 21px; }
-.game-content small { color: var(--muted); font-size: 13px; line-height: 1.65; }
-.card-arrow { position: absolute; right: 25px; bottom: 22px; color: var(--green); font-size: 24px; }
+.game-logo { position: absolute; inset: 20px; width: calc(100% - 40px); height: calc(100% - 40px); object-fit: contain; }
+
+main { display: flex; flex-direction: column; }
+.games-section { order: 1; }
+.stats-section { order: 2; }
+.quick-pick-section { order: 3; }
+.ai-pick-section { order: 4; }
+.pair-section { order: 5; background: #faf8f2; }
+.notice { order: 6; }
 
 .quick-pick-section {
   display: grid; grid-template-columns: .75fr 1.25fr; gap: clamp(50px, 9vw, 130px); align-items: center;
@@ -139,9 +135,6 @@ h1 span { color: var(--green); }
 .generate-button:hover { transform: translateY(-2px); background: #ffda7d; }
 .generate-button:active { transform: translateY(1px); }
 .generate-button:focus-visible { outline: 3px solid rgba(255,255,255,.7); outline-offset: 3px; }
-.dice { font-size: 12px; transform: rotate(45deg); }
-.generated-time { height: 16px; margin: 12px 0 0; color: #89aa9e; font-size: 10px; }
-
 .ai-pick-section { background: #e8e4da; }
 .ai-heading { display: flex; align-items: end; justify-content: space-between; gap: 50px; }
 .ai-heading h2 { margin-bottom: 18px; font-size: clamp(38px, 4vw, 54px); letter-spacing: -.04em; }
@@ -169,32 +162,43 @@ h1 span { color: var(--green); }
 .stats-intro { padding-top: 6px; }
 .stats-intro .eyebrow { color: #8dd3bc; }
 .stats-intro > p:not(.eyebrow) { margin-top: 26px; color: #b9cec7; line-height: 1.9; }
+.stats-range-control { margin-top: 32px; }
+.stats-range-options { display: flex; flex-wrap: wrap; gap: 7px; }
+.stats-range-button { padding: 8px 11px; color: #a9c0b8; background: rgba(255,255,255,.07); border: 1px solid rgba(255,255,255,.18); border-radius: 5px; font: 600 11px "Noto Sans TC", sans-serif; cursor: pointer; transition: color .2s, background .2s, border-color .2s; }
+.stats-range-button:hover:not(:disabled) { color: white; border-color: rgba(255,255,255,.4); }
+.stats-range-button.active { color: var(--green-dark); background: #a7d9c8; border-color: #a7d9c8; }
+.stats-range-button:disabled { opacity: .45; cursor: not-allowed; }
+.stats-range-button:focus-visible { outline: 3px solid rgba(255,255,255,.35); outline-offset: 2px; }
 .dataset-summary { display: grid; grid-template-columns: .8fr 1.2fr; gap: 18px; margin-top: 48px; padding-top: 28px; border-top: 1px solid rgba(255,255,255,.16); }
 .dataset-summary div { display: flex; flex-direction: column; }
-.dataset-summary dt { order: 0; font: 700 23px "Outfit", sans-serif; }
-.dataset-summary dd { order: 1; margin: 5px 0 0; color: #95b2a8; font-size: 12px; }
-.rankings { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+.dataset-summary dt { margin-top: 5px; font: 700 23px "Outfit", sans-serif; }
+.dataset-summary dd { margin: 0; color: #95b2a8; font-size: 12px; }
+.rankings { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; }
 .ranking-card { padding: 28px; color: var(--ink); background: var(--card); border-radius: 10px; box-shadow: 0 18px 50px rgba(0,0,0,.14); }
 .ranking-card header { display: flex; align-items: center; gap: 14px; margin-bottom: 24px; padding-bottom: 22px; border-bottom: 1px solid var(--line); }
 .ranking-icon { width: 40px; height: 40px; display: grid; place-items: center; border-radius: 50%; font-size: 21px; font-weight: 800; }
 .hot .ranking-icon { color: var(--red); background: var(--red-soft); }
 .cold .ranking-icon { color: var(--blue); background: var(--blue-soft); }
+.special .ranking-icon { color: var(--green); background: #dcefe8; }
 .ranking-card header p { margin-bottom: 3px; color: var(--muted); font: 700 9px "Outfit", sans-serif; letter-spacing: .18em; }
 .ranking-card h3 { margin-bottom: 0; font-size: 19px; }
-.number-list { margin: 0; padding: 0; list-style: none; }
+.number-list { max-height: 275px; margin: 0; padding: 0 8px 0 0; overflow-y: auto; list-style: none; scrollbar-gutter: stable; }
 .number-list li { min-height: 55px; display: grid; grid-template-columns: 28px 50px 1fr auto; gap: 10px; align-items: center; border-bottom: 1px solid #ecebe6; }
 .number-list li:last-child { border-bottom: 0; }
 .rank { color: #969c99; font: 600 12px "Outfit", sans-serif; }
 .number-ball { width: 40px; height: 40px; display: grid; place-items: center; color: white; border-radius: 50%; font: 700 15px "Outfit", sans-serif; }
 .hot .number-ball { background: var(--red); box-shadow: inset -4px -5px 8px rgba(0,0,0,.12); }
 .cold .number-ball { background: var(--blue); box-shadow: inset -4px -5px 8px rgba(0,0,0,.12); }
+.special .number-ball { background: var(--green); box-shadow: inset -4px -5px 8px rgba(0,0,0,.12); }
+.special-number-list li { grid-template-columns: 42px 1fr; }
+.special-rule { color: var(--muted); font-size: 12px; line-height: 1.45; }
 .frequency-bar { height: 5px; overflow: hidden; background: #ecebe7; border-radius: 5px; }
 .frequency-bar span { display: block; height: 100%; border-radius: inherit; }
 .hot .frequency-bar span { background: #e47769; }.cold .frequency-bar span { background: #70a5c5; }
 .count { font: 600 12px "Outfit", sans-serif; color: var(--muted); white-space: nowrap; }
 .loading-row { display: block !important; padding: 20px 0; color: var(--muted); font-size: 13px; }
 .error-message { color: var(--red) !important; }
-.pair-analysis { grid-column: 1 / -1; margin-top: 8px; padding: 30px; color: var(--ink); background: var(--card); border-radius: 10px; box-shadow: 0 18px 50px rgba(0,0,0,.14); }
+.pair-analysis { padding: 30px; color: var(--ink); background: var(--card); border-radius: 10px; box-shadow: 0 18px 50px rgba(0,0,0,.14); }
 .pair-analysis-header { display: flex; align-items: end; justify-content: space-between; gap: 24px; margin-bottom: 22px; }
 .pair-analysis-header > div > p { margin-bottom: 4px; color: var(--muted); font: 700 9px "Outfit", sans-serif; letter-spacing: .18em; }
 .pair-analysis-header h3 { margin-bottom: 0; font-size: 21px; }
@@ -238,6 +242,7 @@ footer p { margin: 0; font-size: 11px; }
   .game-grid, .rankings { grid-template-columns: 1fr; }
   .game-card { min-height: 154px; }
   .dataset-summary { margin-bottom: 10px; }
+  .stats-range-button { flex: 1 1 calc(50% - 7px); }
   .ranking-card { padding: 23px; }
   .pair-analysis { padding: 22px 16px; }
   .pair-analysis-header { align-items: flex-start; flex-direction: column; gap: 10px; }
