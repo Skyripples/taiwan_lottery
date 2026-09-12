@@ -100,14 +100,9 @@ function showHome() {
 }
 
 function resetAiResults() {
-  const message = selectedGame === "daily539"
-    ? "按下按鈕產生策略。"
-    : "目前策略選號僅支援今彩 539。";
-  document.querySelector("#ai-results").innerHTML = `
-    <div class="ai-empty-state">
-      <span aria-hidden="true">AI</span>
-      <p>${message}</p>
-    </div>`;
+  const results = document.querySelector("#ai-results");
+  results.innerHTML = "";
+  results.hidden = true;
 }
 
 function getDrawNumbers(draw) {
@@ -202,7 +197,9 @@ function buildAiPicks(draws) {
 }
 
 function renderAiPicks(picks) {
-  document.querySelector("#ai-results").innerHTML = picks.map((pick, index) => `
+  const results = document.querySelector("#ai-results");
+  results.hidden = false;
+  results.innerHTML = picks.map((pick, index) => `
     <article class="ai-pick-card" style="animation-delay:${index * 45}ms">
       <span class="ai-pick-index">${String(index + 1).padStart(2, "0")}</span>
       <div class="ai-pick-content">
@@ -215,15 +212,8 @@ function renderAiPicks(picks) {
 
 function updateAiAvailability() {
   const button = document.querySelector("#generate-ai-picks");
-  const message = document.querySelector("#ai-availability");
   const supportsAi = selectedGame === "daily539";
   button.disabled = !supportsAi || !historicalDraws.length;
-  message.classList.toggle("unavailable", Boolean(selectedGame) && !supportsAi);
-  message.textContent = !selectedGame
-    ? "請先選擇遊戲。"
-    : supportsAi
-      ? (historicalDraws.length ? `已載入 ${historicalDraws.length.toLocaleString("zh-TW")} 期資料，可開始產生。` : "正在載入今彩 539 歷史資料…")
-      : `${GAME_RULES[selectedGame].name} 尚無歷史資料，AI 選號目前僅支援今彩 539。`;
 }
 
 function generateAiPicks() {
@@ -431,7 +421,6 @@ async function loadStatistics() {
     coldElement.innerHTML = message;
     document.querySelector("#special-numbers").innerHTML = message;
     document.querySelector("#date-range").textContent = "暫時無法取得";
-    document.querySelector("#ai-availability").textContent = "歷史資料讀取失敗，暫時無法使用 AI 選號。";
     renderPairError(error.message || "同期雙號資料暫時無法取得。");
     setStatsRangeControlsEnabled(false);
   }
