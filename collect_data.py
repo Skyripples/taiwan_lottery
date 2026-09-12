@@ -8,8 +8,9 @@ import csv
 import gzip
 import io
 import json
+import os
 import sys
-import urllib.error
+import tempfile
 import urllib.request
 import zipfile
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -31,6 +32,39 @@ OUTPUT_COLUMNS = [
     "sales_count",
     "total_prize",
 ]
+NUMBER_COLUMNS = [f"number_{i}" for i in range(1, 6)]
+
+
+def validate_row(row: dict[str, object], source: str) -> dict[str, str]:
+    draw_no = str(row.get("draw_no", "")).strip()
+    if not draw_no.isdigit():
+        raise ValueError(f"{source} 的期別不合法：{draw_no!r}")
+
+    raw_date = str(row.get("draw_date", "")).strip().replace("/", "-")
+    try:
+        draw_date = date.fromisoformat(raw_date).isoformat()
+    except ValueError as exc:
+        raise ValueError(f"{source} 的開獎日期不合法：{raw_date!r}") from exc
+
+    actual_number_columns = {key for key in row if key.startswith("number_")}
+    if actual_number_columns != set(NUMBER_COLUMNS):
+        raise ValueError(f"{source} 必須恰好包含 5 個獎號")
+
+    numbers = []
+    for column in NUMBER_COLUMNS:
+        value = str(row.get(column, "")).strip()
+        if not value.isdigit() or not 1 <= int(value) <= 39:
+            raise ValueError(f"{source} 的獎號不合法：{value!r}")
+        numbers.append(int(value))
+    if len(set(numbers)) != 5:
+        raise ValueError(f"{source} 的 5 個獎號必須互異：{numbers}")
+
+    normalized = {column: str(row.get(column, "")).strip() for column in OUTPUT_COLUMNS}
+    normalized["draw_no"] = draw_no
+    normalized["draw_date"] = draw_date
+    for column, number in zip(NUMBER_COLUMNS, numbers):
+        normalized[column] = f"{number:02d}"
+    return normalized
 
 
 def request_bytes(url: str, timeout: int = 60) -> bytes:
@@ -66,19 +100,25 @@ def download_recent() -> list[dict[str, str]]:
     for month in recent_months():
         query = f"month={month}&endMonth={month}&pageNum=1&pageSize=200"
         payload = json.loads(request_bytes(f"{API_URL.rsplit('/', 1)[0]}/Daily539Result?{query}"))
-        results = payload.get("content", {}).get("daily539Res") or []
+        content = payload.get("content")
+        if payload.get("rtCode") != 0 or not isinstance(content, dict):
+            raise RuntimeError(f"近期 API 回傳錯誤（{month}）：{payload}")
+        results = content.get("daily539Res")
+        if not isinstance(results, list):
+            raise RuntimeError(f"近期 API 資料格式錯誤（{month}）：{payload}")
         for item in results:
-            numbers = item["drawNumberSize"]
-            rows.append(
-                {
-                    "draw_no": str(item["period"]),
-                    "draw_date": item["lotteryDate"][:10],
-                    **{f"number_{i}": f"{int(number):02d}" for i, number in enumerate(numbers, 1)},
-                    "sales_amount": str(item.get("sellAmount", "")),
-                    "sales_count": "",
-                    "total_prize": str(item.get("totalAmount", "")),
-                }
-            )
+            numbers = item.get("drawNumberSize")
+            if not isinstance(numbers, list):
+                raise ValueError(f"近期 API 的獎號格式錯誤（{month}）：{numbers!r}")
+            row = {
+                "draw_no": str(item.get("period", "")),
+                "draw_date": str(item.get("lotteryDate", ""))[:10],
+                **{f"number_{i}": number for i, number in enumerate(numbers, 1)},
+                "sales_amount": str(item.get("sellAmount", "")),
+                "sales_count": "",
+                "total_prize": str(item.get("totalAmount", "")),
+            }
+            rows.append(validate_row(row, f"近期 API {month}"))
     return rows
 
 
@@ -95,25 +135,16 @@ def parse_game_csv(zip_bytes: bytes, year: int) -> list[dict[str, str]]:
 
             normalized = []
             for row in rows:
-                numbers = [row.get(f"獎號{i}", "").strip() for i in range(1, 6)]
                 if row.get("遊戲名稱", "").strip() != GAME_NAME:
                     continue
-                if len(set(numbers)) != 5 or any(not n.isdigit() or not 1 <= int(n) <= 39 for n in numbers):
-                    raise ValueError(f"{year} 年存在不合法獎號：{numbers}")
-                normalized.append(
-                    {
-                        "draw_no": row["期別"].strip(),
-                        "draw_date": datetime.strptime(row["開獎日期"].strip(), "%Y/%m/%d").date().isoformat(),
-                        "number_1": f"{int(numbers[0]):02d}",
-                        "number_2": f"{int(numbers[1]):02d}",
-                        "number_3": f"{int(numbers[2]):02d}",
-                        "number_4": f"{int(numbers[3]):02d}",
-                        "number_5": f"{int(numbers[4]):02d}",
-                        "sales_amount": row.get("銷售總額", "").strip(),
-                        "sales_count": row.get("銷售注數", "").strip(),
-                        "total_prize": row.get("總獎金", "").strip(),
-                    }
-                )
+                normalized.append(validate_row({
+                    "draw_no": row.get("期別", ""),
+                    "draw_date": row.get("開獎日期", ""),
+                    **{f"number_{i}": row.get(f"獎號{i}", "") for i in range(1, 6)},
+                    "sales_amount": row.get("銷售總額", ""),
+                    "sales_count": row.get("銷售注數", ""),
+                    "total_prize": row.get("總獎金", ""),
+                }, f"{year} 年年度資料"))
             return normalized
     raise RuntimeError(f"{year} 年 ZIP 中找不到 {GAME_NAME} CSV")
 
@@ -129,12 +160,8 @@ def collect(start_year: int, end_year: int) -> list[dict[str, str]]:
         futures = {executor.submit(fetch, year): year for year in years}
         for future in as_completed(futures):
             year = futures[future]
+            _, rows = future.result()
             print(f"Downloaded {year}", file=sys.stderr)
-            try:
-                _, rows = future.result()
-            except (urllib.error.HTTPError, urllib.error.URLError, RuntimeError) as exc:
-                print(f"Warning: skipped {year}: {exc}", file=sys.stderr)
-                continue
             for row in rows:
                 existing = draws.get(row["draw_no"])
                 if existing and existing != row:
@@ -145,22 +172,22 @@ def collect(start_year: int, end_year: int) -> list[dict[str, str]]:
     for row in download_recent():
         existing = draws.get(row["draw_no"])
         if existing:
+            identity_columns = ["draw_date", *NUMBER_COLUMNS]
+            if any(existing[column] != row[column] for column in identity_columns):
+                raise ValueError(f"期別 {row['draw_no']} 的年度與近期資料互相衝突")
             row["sales_count"] = existing["sales_count"]
         draws[row["draw_no"]] = row
-    return sorted(draws.values(), key=lambda row: (row["draw_date"], row["draw_no"]))
+    rows = sorted(draws.values(), key=lambda row: (row["draw_date"], row["draw_no"]))
+    return [validate_row(row, "合併資料") for row in rows]
 
 
 def write_outputs(rows: list[dict[str, str]], output: Path) -> None:
     if not rows:
         raise RuntimeError("沒有取得任何資料")
+    rows = [validate_row(row, "輸出資料") for row in rows]
     output.parent.mkdir(parents=True, exist_ok=True)
-    with output.open("w", encoding="utf-8", newline="") as file:
-        writer = csv.DictWriter(file, fieldnames=OUTPUT_COLUMNS)
-        writer.writeheader()
-        writer.writerows(rows)
     gzip_path = output.with_name(output.name + ".gz")
-    gzip_path.write_bytes(gzip.compress(output.read_bytes(), compresslevel=9, mtime=0))
-
+    metadata_path = output.with_suffix(".metadata.json")
     metadata = {
         "game": GAME_NAME,
         "source": "Taiwan Lottery official annual result downloads",
@@ -170,10 +197,22 @@ def write_outputs(rows: list[dict[str, str]], output: Path) -> None:
         "first_draw_date": rows[0]["draw_date"],
         "last_draw_date": rows[-1]["draw_date"],
     }
-    output.with_suffix(".metadata.json").write_text(
-        json.dumps(metadata, ensure_ascii=False, indent=2) + "\n",
-        encoding="utf-8",
-    )
+    with tempfile.TemporaryDirectory(dir=output.parent, prefix=".lottery-") as temp_dir:
+        temp_output = Path(temp_dir) / output.name
+        temp_gzip = Path(temp_dir) / gzip_path.name
+        temp_metadata = Path(temp_dir) / metadata_path.name
+        with temp_output.open("w", encoding="utf-8", newline="") as file:
+            writer = csv.DictWriter(file, fieldnames=OUTPUT_COLUMNS)
+            writer.writeheader()
+            writer.writerows(rows)
+        temp_gzip.write_bytes(gzip.compress(temp_output.read_bytes(), compresslevel=9, mtime=0))
+        temp_metadata.write_text(
+            json.dumps(metadata, ensure_ascii=False, indent=2) + "\n",
+            encoding="utf-8",
+        )
+        os.replace(temp_output, output)
+        os.replace(temp_gzip, gzip_path)
+        os.replace(temp_metadata, metadata_path)
 
 
 def main() -> None:
@@ -190,4 +229,8 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except Exception as exc:
+        print(f"Error: {exc}", file=sys.stderr)
+        sys.exit(1)

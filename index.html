@@ -25,6 +25,8 @@
       </a>
       <nav aria-label="主要導覽">
         <a href="#games">遊戲總覽</a>
+        <a href="#quick-pick">隨機取號</a>
+        <a href="#ai-pick">AI 選號</a>
         <a href="#daily539">539 統計</a>
       </nav>
     </header>
@@ -60,7 +62,7 @@
         </div>
 
         <div class="game-grid">
-          <a class="game-card featured" href="#daily539">
+          <button class="game-card featured selected" type="button" data-game="daily539" aria-pressed="true">
             <span class="game-icon icon-539">539</span>
             <span class="game-content">
               <span class="status active">目前主打</span>
@@ -68,52 +70,97 @@
               <small>每週一至週六開獎，從 01–39 選出 5 個號碼</small>
             </span>
             <span class="card-arrow" aria-hidden="true">↗</span>
-          </a>
+          </button>
 
-          <article class="game-card disabled">
+          <button class="game-card" type="button" data-game="lotto649" aria-pressed="false">
             <span class="game-icon icon-lotto">大</span>
             <span class="game-content">
-              <span class="status">即將推出</span>
+              <span class="status quick-pick-ready">支援隨機取號</span>
               <strong>大樂透</strong>
               <small>第一區 01–49，另開出一個特別號</small>
             </span>
-          </article>
+          </button>
 
-          <article class="game-card disabled">
+          <button class="game-card" type="button" data-game="power638" aria-pressed="false">
             <span class="game-icon icon-power">威</span>
             <span class="game-content">
-              <span class="status">即將推出</span>
+              <span class="status quick-pick-ready">支援隨機取號</span>
               <strong>威力彩</strong>
               <small>雙區選號，累積頭獎充滿想像</small>
             </span>
-          </article>
+          </button>
 
-          <article class="game-card disabled">
+          <button class="game-card" type="button" data-game="threeStar" aria-pressed="false">
             <span class="game-icon icon-3star">3</span>
             <span class="game-content">
-              <span class="status">即將推出</span>
+              <span class="status quick-pick-ready">支援隨機取號</span>
               <strong>3星彩</strong>
               <small>百位、十位、個位的三位數玩法</small>
             </span>
-          </article>
+          </button>
 
-          <article class="game-card disabled">
+          <button class="game-card" type="button" data-game="fourStar" aria-pressed="false">
             <span class="game-icon icon-4star">4</span>
             <span class="game-content">
-              <span class="status">即將推出</span>
+              <span class="status quick-pick-ready">支援隨機取號</span>
               <strong>4星彩</strong>
               <small>千位至個位的四位數玩法</small>
             </span>
-          </article>
+          </button>
 
-          <article class="game-card disabled">
+          <button class="game-card" type="button" data-game="bingo" aria-pressed="false">
             <span class="game-icon icon-bingo">賓</span>
             <span class="game-content">
-              <span class="status">即將推出</span>
+              <span class="status quick-pick-ready">支援隨機取號</span>
               <strong>BINGO BINGO</strong>
               <small>每 5 分鐘開獎的電腦型彩券</small>
             </span>
-          </article>
+          </button>
+        </div>
+      </section>
+
+      <section class="section quick-pick-section" id="quick-pick">
+        <div class="quick-pick-copy">
+          <p class="eyebrow">QUICK PICK</p>
+          <h2>隨機取號</h2>
+          <p>先從上方選擇遊戲，再產生一組符合該遊戲規則的隨機號碼。</p>
+          <div class="selected-game">
+            <span>目前選擇</span>
+            <strong id="selected-game-name">今彩 539</strong>
+            <small id="selected-game-rule">01–39 選 5 個不重複號碼</small>
+          </div>
+        </div>
+
+        <div class="quick-pick-machine">
+          <div class="quick-pick-result" id="quick-pick-result" aria-live="polite">
+            <p>按下按鈕，產生你的隨機號碼</p>
+          </div>
+          <button class="generate-button" id="generate-numbers" type="button">
+            <span class="dice" aria-hidden="true">◆</span>
+            隨機取號
+          </button>
+          <p class="generated-time" id="generated-time"></p>
+        </div>
+      </section>
+
+      <section class="section ai-pick-section" id="ai-pick">
+        <div class="ai-heading">
+          <div>
+            <p class="eyebrow">DATA STRATEGY</p>
+            <h2>AI 選號</h2>
+            <p>以今彩 539 歷史開獎資料，從十種不同角度組合參考號碼。每次產生 10 組，並說明各組的選號依據。</p>
+          </div>
+          <button class="ai-generate-button" id="generate-ai-picks" type="button" disabled>
+            <span aria-hidden="true">✦</span>
+            產生 10 組號碼
+          </button>
+        </div>
+        <p class="ai-availability" id="ai-availability" aria-live="polite">正在載入今彩 539 歷史資料…</p>
+        <div class="ai-results" id="ai-results" aria-live="polite">
+          <div class="ai-empty-state">
+            <span aria-hidden="true">AI</span>
+            <p>資料準備完成後，按下按鈕開始分析</p>
+          </div>
         </div>
       </section>
 
