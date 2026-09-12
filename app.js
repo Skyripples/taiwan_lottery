@@ -412,9 +412,6 @@ async function loadStatistics() {
     const draws = parseCsv(await response.text());
     if (!draws.length) throw new Error("歷史資料目前為空");
     historicalDraws = draws;
-    updateAiAvailability();
-    setStatsRangeControlsEnabled(true);
-    updateStatistics("all");
   } catch (error) {
     const message = `<li class="loading-row error-message">${error.message}，請稍後再試。</li>`;
     hotElement.innerHTML = message;
@@ -423,7 +420,12 @@ async function loadStatistics() {
     document.querySelector("#date-range").textContent = "暫時無法取得";
     renderPairError(error.message || "同期雙號資料暫時無法取得。");
     setStatsRangeControlsEnabled(false);
+    return;
   }
+
+  updateAiAvailability();
+  setStatsRangeControlsEnabled(true);
+  updateStatistics("all");
 }
 
 document.querySelector("#current-year").textContent = new Date().getFullYear();
