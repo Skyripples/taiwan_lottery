@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="台灣彩券歷史開獎統計，以公開歷史資料整理今彩 539 熱門與冷門號碼。"
+    />
+    <title>彩號研究所｜台灣彩券數據統計</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;600;700;800&family=Outfit:wght@600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles.css" />
+    <script src="app.js" defer></script>
+  </head>
+  <body>
+    <header class="site-header">
+      <a class="brand" href="#top" aria-label="彩號研究所首頁">
+        <span class="brand-mark">彩</span>
+        <span>彩號研究所</span>
+      </a>
+      <nav aria-label="主要導覽">
+        <a href="#games">遊戲總覽</a>
+        <a href="#daily539">539 統計</a>
+      </nav>
+    </header>
+
+    <main id="top">
+      <section class="hero">
+        <div class="hero-copy">
+          <p class="eyebrow">TAIWAN LOTTERY DATA LAB</p>
+          <h1>從歷史開獎資料，<br /><span>看見號碼的軌跡。</span></h1>
+          <p class="hero-description">
+            用清楚、簡單的方式探索台灣彩券數據。目前聚焦今彩 539，快速掌握歷年最常與最少出現的號碼。
+          </p>
+          <a class="primary-button" href="#daily539">查看 539 統計 <span aria-hidden="true">↓</span></a>
+        </div>
+        <div class="hero-visual" aria-hidden="true">
+          <div class="orbit orbit-one"></div>
+          <div class="orbit orbit-two"></div>
+          <span class="lotto-ball ball-39">39</span>
+          <span class="lotto-ball ball-05">05</span>
+          <span class="lotto-ball ball-22">22</span>
+          <span class="spark spark-one">✦</span>
+          <span class="spark spark-two">✦</span>
+        </div>
+      </section>
+
+      <section class="section games-section" id="games">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">EXPLORE GAMES</p>
+            <h2>選擇彩券遊戲</h2>
+          </div>
+          <p>更多遊戲的歷史數據與分析工具將陸續加入。</p>
+        </div>
+
+        <div class="game-grid">
+          <a class="game-card featured" href="#daily539">
+            <span class="game-icon icon-539">539</span>
+            <span class="game-content">
+              <span class="status active">目前主打</span>
+              <strong>今彩 539</strong>
+              <small>每週一至週六開獎，從 01–39 選出 5 個號碼</small>
+            </span>
+            <span class="card-arrow" aria-hidden="true">↗</span>
+          </a>
+
+          <article class="game-card disabled">
+            <span class="game-icon icon-lotto">大</span>
+            <span class="game-content">
+              <span class="status">即將推出</span>
+              <strong>大樂透</strong>
+              <small>第一區 01–49，另開出一個特別號</small>
+            </span>
+          </article>
+
+          <article class="game-card disabled">
+            <span class="game-icon icon-power">威</span>
+            <span class="game-content">
+              <span class="status">即將推出</span>
+              <strong>威力彩</strong>
+              <small>雙區選號，累積頭獎充滿想像</small>
+            </span>
+          </article>
+
+          <article class="game-card disabled">
+            <span class="game-icon icon-3star">3</span>
+            <span class="game-content">
+              <span class="status">即將推出</span>
+              <strong>3星彩</strong>
+              <small>百位、十位、個位的三位數玩法</small>
+            </span>
+          </article>
+
+          <article class="game-card disabled">
+            <span class="game-icon icon-4star">4</span>
+            <span class="game-content">
+              <span class="status">即將推出</span>
+              <strong>4星彩</strong>
+              <small>千位至個位的四位數玩法</small>
+            </span>
+          </article>
+
+          <article class="game-card disabled">
+            <span class="game-icon icon-bingo">賓</span>
+            <span class="game-content">
+              <span class="status">即將推出</span>
+              <strong>BINGO BINGO</strong>
+              <small>每 5 分鐘開獎的電腦型彩券</small>
+            </span>
+          </article>
+        </div>
+      </section>
+
+      <section class="section stats-section" id="daily539">
+        <div class="stats-intro">
+          <p class="eyebrow">DAILY CASH 539</p>
+          <h2>今彩 539<br />歷年號碼統計</h2>
+          <p>
+            統計每一期的五個中獎號碼，找出累計出現次數最高與最低的號碼。資料更新後，結果會自動重新計算。
+          </p>
+          <dl class="dataset-summary" aria-label="資料摘要">
+            <div>
+              <dt id="draw-count">—</dt>
+              <dd>統計期數</dd>
+            </div>
+            <div>
+              <dt id="date-range">讀取中</dt>
+              <dd>資料範圍</dd>
+            </div>
+          </dl>
+        </div>
+
+        <div class="rankings" aria-live="polite">
+          <section class="ranking-card hot">
+            <header>
+              <span class="ranking-icon" aria-hidden="true">↗</span>
+              <div>
+                <p>HOT NUMBERS</p>
+                <h3>出現最多次</h3>
+              </div>
+            </header>
+            <ol class="number-list" id="hot-numbers">
+              <li class="loading-row">正在分析歷史資料…</li>
+            </ol>
+          </section>
+
+          <section class="ranking-card cold">
+            <header>
+              <span class="ranking-icon" aria-hidden="true">↘</span>
+              <div>
+                <p>COLD NUMBERS</p>
+                <h3>出現最少次</h3>
+              </div>
+            </header>
+            <ol class="number-list" id="cold-numbers">
+              <li class="loading-row">正在分析歷史資料…</li>
+            </ol>
+          </section>
+        </div>
+      </section>
+
+      <aside class="notice">
+        <span aria-hidden="true">i</span>
+        <p><strong>理性提醒</strong>　歷史開獎次數不代表未來中獎機率；每次開獎皆為獨立隨機事件，本網站僅供數據研究與娛樂參考。</p>
+      </aside>
+    </main>
+
+    <footer>
+      <a class="brand footer-brand" href="#top"><span class="brand-mark">彩</span><span>彩號研究所</span></a>
+      <p>資料來源：台灣彩券官方歷史開獎資料</p>
+      <p>© <span id="current-year"></span> Lottery Data Lab</p>
+    </footer>
+  </body>
+</html>
