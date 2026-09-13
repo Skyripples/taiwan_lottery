@@ -104,12 +104,44 @@ h1 span { color: var(--green); }
 .game-logo { position: absolute; inset: 20px; width: calc(100% - 40px); height: calc(100% - 40px); object-fit: contain; }
 
 main { display: flex; flex-direction: column; }
-.games-section { order: 1; }
-.stats-section { order: 2; }
-.quick-pick-section { order: 3; }
-.ai-pick-section { order: 4; }
-.pair-section { order: 5; background: #faf8f2; }
-.notice { order: 6; }
+.bulletin-section { order: 1; background: #faf8f2; }
+.games-section { order: 2; }
+.rules-section { order: 3; }
+.stats-section { order: 4; }
+.quick-pick-section { order: 5; }
+.ai-pick-section { order: 6; }
+.pair-section { order: 7; background: #faf8f2; }
+.notice { order: 8; }
+
+.bulletin-section { padding-top: 80px; padding-bottom: 80px; }
+.bulletin-content { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
+.bulletin-item { padding: 26px 28px; background: white; border-radius: 10px; box-shadow: 0 12px 35px rgba(31,44,39,.08); }
+.bulletin-item p { margin-bottom: 8px; color: var(--muted); font-size: 10px; font-weight: 700; letter-spacing: .14em; }
+.bulletin-item h3 { margin-bottom: 12px; font-size: 19px; }
+.bulletin-item span { color: var(--muted); font-size: 12px; }
+.jackpot-alert { border-left: 4px solid #d0ad62; }
+.data-alert { border-left: 4px solid var(--red); }
+.data-alert h3 { color: var(--red); }
+.bulletin-empty { grid-column: 1 / -1; margin: 0; padding: 24px 28px; color: var(--muted); background: white; border-radius: 10px; }
+
+.rules-section { background: #f5f1e8; }
+.rules-heading { display: flex; align-items: end; justify-content: space-between; gap: 30px; margin-bottom: 38px; }
+.rules-heading h2 { margin-bottom: 0; font-size: clamp(38px, 4vw, 54px); letter-spacing: -.04em; }
+.rules-heading > strong { color: var(--green); font-size: 18px; }
+.rules-layout { display: grid; grid-template-columns: .72fr 1.28fr; gap: clamp(35px, 7vw, 95px); align-items: start; }
+.rules-summary { padding: 28px; background: white; border-left: 4px solid var(--green); border-radius: 0 10px 10px 0; box-shadow: 0 12px 35px rgba(31,44,39,.08); }
+.rules-price { margin-bottom: 24px; color: var(--green); font: 700 28px "Outfit", "Noto Sans TC", sans-serif; }
+.rules-summary h3 { margin-bottom: 10px; font-size: 17px; }
+.rules-summary > p:not(.rules-price) { margin-bottom: 22px; color: var(--muted); line-height: 1.8; }
+.rules-summary a { color: var(--green); font-size: 12px; font-weight: 700; }
+.rules-prize-wrap { overflow-x: auto; background: white; border-radius: 10px; box-shadow: 0 12px 35px rgba(31,44,39,.08); }
+.rules-prize-table { width: 100%; min-width: 600px; border-collapse: collapse; font-size: 13px; }
+.rules-prize-table th, .rules-prize-table td { padding: 15px 18px; border-bottom: 1px solid var(--line); text-align: left; }
+.rules-prize-table thead th { color: var(--muted); background: #ebe7de; font-size: 11px; white-space: nowrap; }
+.rules-prize-table tbody th { color: var(--green-dark); white-space: nowrap; }
+.rules-prize-table td:last-child { font-weight: 700; white-space: nowrap; }
+.rules-prize-table tbody tr:last-child > * { border-bottom: 0; }
+.rules-note { margin: 20px 0 0; color: var(--muted); font-size: 11px; }
 
 .quick-pick-section {
   display: grid; grid-template-columns: .75fr 1.25fr; gap: clamp(50px, 9vw, 130px); align-items: center;
@@ -163,10 +195,11 @@ main { display: flex; flex-direction: column; }
 .stats-range-button.active { color: var(--green-dark); background: #a7d9c8; border-color: #a7d9c8; }
 .stats-range-button:disabled { opacity: .45; cursor: not-allowed; }
 .stats-range-button:focus-visible { outline: 3px solid rgba(255,255,255,.35); outline-offset: 2px; }
-.dataset-summary { display: grid; grid-template-columns: .8fr 1.2fr; gap: 18px; margin-top: 48px; padding-top: 28px; border-top: 1px solid rgba(255,255,255,.16); }
-.dataset-summary div { display: flex; flex-direction: column; }
+.dataset-summary { display: grid; grid-template-columns: .55fr 1.35fr 1.1fr; gap: 12px; margin-top: 48px; padding-top: 28px; border-top: 1px solid rgba(255,255,255,.16); }
+.dataset-summary div { min-width: 0; display: flex; flex-direction: column; }
 .dataset-summary dt { margin-top: 5px; font: 700 23px "Outfit", sans-serif; }
 .dataset-summary dd { margin: 0; color: #95b2a8; font-size: 12px; }
+#date-range, #last-updated { overflow-wrap: anywhere; }
 .rankings { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; }
 .ranking-card { padding: 28px; color: var(--ink); background: var(--card); border-radius: 10px; box-shadow: 0 18px 50px rgba(0,0,0,.14); }
 .ranking-card header { display: flex; align-items: center; gap: 14px; margin-bottom: 24px; padding-bottom: 22px; border-bottom: 1px solid var(--line); }
@@ -220,8 +253,10 @@ footer p { margin: 0; font-size: 11px; }
   .hero-visual { margin: 50px auto 0; width: min(100%, 500px); }
   .game-grid { grid-template-columns: repeat(2, 1fr); }
   .stats-section { grid-template-columns: 1fr; }
+  .rules-layout { grid-template-columns: 1fr; }
   .quick-pick-section { grid-template-columns: 1fr; }
   .ai-results { grid-template-columns: 1fr; }
+  .bulletin-content { grid-template-columns: 1fr; }
 }
 @media (max-width: 620px) {
   .site-header { width: calc(100% - 32px); height: 70px; }

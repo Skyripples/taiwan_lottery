@@ -14,8 +14,8 @@
       href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;600;700;800&family=Outfit:wght@600;700&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="styles.css?v=1.4.1" />
-    <script src="app.js?v=1.4.1" defer></script>
+    <link rel="stylesheet" href="styles.css?v=1.5.0" />
+    <script src="app.js?v=1.5.0" defer></script>
   </head>
   <body>
     <header class="site-header">
@@ -28,6 +28,18 @@
     </header>
 
     <main id="top">
+      <section class="section bulletin-section" aria-labelledby="bulletin-title">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">TODAY'S UPDATE</p>
+            <h2 id="bulletin-title">今日速報</h2>
+          </div>
+        </div>
+        <div class="bulletin-content" id="bulletin-content" aria-live="polite">
+          <p class="bulletin-empty">正在讀取今日速報…</p>
+        </div>
+      </section>
+
       <section class="section games-section" id="games">
         <div class="section-heading">
           <div>
@@ -135,11 +147,42 @@
         </section>
       </section>
 
-      <section class="section stats-section game-feature" id="daily539" hidden>
+      <section class="section rules-section game-feature" id="game-rules" hidden>
+        <div class="rules-heading">
+          <div>
+            <p class="eyebrow">HOW TO PLAY</p>
+            <h2>遊戲規則</h2>
+          </div>
+          <strong id="rules-game-name">今彩 539</strong>
+        </div>
+        <div class="rules-layout">
+          <div class="rules-summary">
+            <p class="rules-price" id="rules-price">每注 NT$50</p>
+            <h3>玩法</h3>
+            <p id="rules-play">從 01–39 選出 5 個號碼；當期開出 5 個獎號，依對中數量決定獎項。</p>
+            <a id="rules-source" href="https://www.taiwanlottery.com/lotto/info/daily_cash/" target="_blank" rel="noopener noreferrer">查看台灣彩券官方完整規則 ↗</a>
+          </div>
+          <div class="rules-prize-wrap">
+            <table class="rules-prize-table">
+              <thead>
+                <tr>
+                  <th scope="col">獎項</th>
+                  <th scope="col">中獎方式</th>
+                  <th scope="col">單注獎金</th>
+                </tr>
+              </thead>
+              <tbody id="rules-prize-body"></tbody>
+            </table>
+          </div>
+        </div>
+        <p class="rules-note">實際獎金、分配方式與活動加碼以台灣彩券當期公告為準。</p>
+      </section>
+
+      <section class="section stats-section game-feature" id="historical-stats" hidden>
         <div class="stats-intro">
-          <p class="eyebrow">DAILY CASH 539</p>
-          <h2>今彩 539<br />歷年數據統計</h2>
-          <p>
+          <p class="eyebrow" id="stats-eyebrow">DAILY CASH 539</p>
+          <h2 id="stats-title">今彩 539<br />歷史數據統計</h2>
+          <p id="stats-description">
             統計每一期的五個中獎號碼，找出累計出現次數最高與最低的號碼。資料更新後，結果會自動重新計算。
           </p>
           <div class="stats-range-control">
@@ -158,6 +201,10 @@
             <div>
               <dd>資料範圍</dd>
               <dt id="date-range">讀取中</dt>
+            </div>
+            <div>
+              <dd>最後更新時間</dd>
+              <dt id="last-updated">—</dt>
             </div>
           </dl>
         </div>

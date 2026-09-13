@@ -1,5 +1,58 @@
 const CSV_PATH = "data/daily_cash.csv";
 const NUMBER_COLUMNS = ["number_1", "number_2", "number_3", "number_4", "number_5"];
+const HISTORICAL_GAMES = {
+  daily539: { path: CSV_PATH, eyebrow: "DAILY CASH 539", title: "今彩 539", columns: NUMBER_COLUMNS, min: 1, max: 39 },
+  lotto649: { path: "data/lotto649.csv", eyebrow: "LOTTO 6/49", title: "大樂透", columns: ["number_1", "number_2", "number_3", "number_4", "number_5", "number_6"], min: 1, max: 49 },
+  power638: { path: "data/super_lotto638.csv", eyebrow: "SUPER LOTTO 638", title: "威力彩第一區", columns: ["number_1", "number_2", "number_3", "number_4", "number_5", "number_6"], min: 1, max: 38 },
+  markSix39: { path: "data/39_m5.csv", eyebrow: "39 LOTTO", title: "39 樂合彩", columns: ["number_1", "number_2", "number_3", "number_4", "number_5"], min: 1, max: 39 },
+  markSix49: { path: "data/49_m6.csv", eyebrow: "49 LOTTO", title: "49 樂合彩", columns: ["number_1", "number_2", "number_3", "number_4", "number_5", "number_6"], min: 1, max: 49 },
+  threeStar: { path: "data/3_d.csv", eyebrow: "3-STAR", title: "3 星彩", columns: ["number_1", "number_2", "number_3"], min: 0, max: 9 },
+  fourStar: { path: "data/4_d.csv", eyebrow: "4-STAR", title: "4 星彩", columns: ["number_1", "number_2", "number_3", "number_4"], min: 0, max: 9 },
+};
+const GAME_DETAILS = {
+  daily539: {
+    price: "每注 NT$50",
+    play: "從 01–39 選出 5 個號碼；當期開出 5 個獎號，依對中數量決定獎項。",
+    prizes: [["頭獎", "5 碼全中", "NT$8,000,000"], ["貳獎", "任 4 碼", "NT$20,000"], ["參獎", "任 3 碼", "NT$300"], ["肆獎", "任 2 碼", "NT$50"]],
+    url: "https://www.taiwanlottery.com/lotto/info/daily_cash/",
+  },
+  lotto649: {
+    price: "每注 NT$50",
+    play: "從 01–49 選出 6 個號碼；開獎另有 1 個特別號，依主號與特別號的對中情形給獎。",
+    prizes: [["頭獎", "6 個主號全中", "依當期獎金分配"], ["貳獎", "5 主號＋特別號", "依當期獎金分配"], ["參獎", "5 個主號", "依當期獎金分配"], ["肆獎", "4 主號＋特別號", "依當期獎金分配"], ["伍獎", "4 個主號", "NT$2,000"], ["陸獎", "3 主號＋特別號", "NT$1,000"], ["柒獎", "2 主號＋特別號", "NT$400"], ["普獎", "3 個主號", "NT$400"]],
+    url: "https://www.taiwanlottery.com/lotto/info/lotto649/",
+  },
+  power638: {
+    price: "每注 NT$100",
+    play: "第一區從 01–38 選 6 個號碼，第二區從 01–08 選 1 個號碼；兩區分別對獎。",
+    prizes: [["頭獎", "第一區 6 碼＋第二區", "依當期獎金分配"], ["貳獎", "第一區 6 碼", "依當期獎金分配"], ["參獎", "第一區 5 碼＋第二區", "NT$150,000"], ["肆獎", "第一區 5 碼", "NT$20,000"], ["伍獎", "第一區 4 碼＋第二區", "NT$4,000"], ["陸獎", "第一區 4 碼", "NT$800"], ["柒獎", "第一區 3 碼＋第二區", "NT$400"], ["捌獎", "第一區 2 碼＋第二區", "NT$200"], ["玖獎", "第一區 3 碼", "NT$100"], ["普獎", "第一區 1 碼＋第二區", "NT$100"]],
+    url: "https://www.taiwanlottery.com/lotto/info/super_lotto638/",
+  },
+  markSix39: {
+    price: "每注 NT$25",
+    play: "從 01–39 選擇 2、3 或 4 個號碼；所選號碼全部包含在當期 5 個獎號內即中獎。",
+    prizes: [["二合", "選 2 碼且全部對中", "NT$1,125"], ["三合", "選 3 碼且全部對中", "NT$11,250"], ["四合", "選 4 碼且全部對中", "NT$212,500"]],
+    url: "https://www.taiwanlottery.com/lotto/info/39_m5/",
+  },
+  markSix49: {
+    price: "每注 NT$25",
+    play: "從 01–49 選擇 2、3 或 4 個號碼；所選號碼全部包含在當期 6 個獎號內即中獎。",
+    prizes: [["二合", "選 2 碼且全部對中", "NT$1,250"], ["三合", "選 3 碼且全部對中", "NT$12,500"], ["四合", "選 4 碼且全部對中", "NT$200,000"]],
+    url: "https://www.taiwanlottery.com/lotto/info/49_m6/",
+  },
+  threeStar: {
+    price: "每注 NT$25",
+    play: "從百位、十位、個位各選 0–9 的一個數字，依相同位置對中的位數給獎。",
+    prizes: [["壹獎", "3 位數字及位置全中", "NT$5,000"], ["貳獎", "任 2 位數字及位置相同", "NT$500"], ["參獎", "任 1 位數字及位置相同", "NT$50"]],
+    url: "https://www.taiwanlottery.com/lotto/info/3_d/",
+  },
+  fourStar: {
+    price: "每注 NT$25",
+    play: "從千位、百位、十位、個位各選 0–9 的一個數字，依相同位置對中的位數給獎。",
+    prizes: [["壹獎", "4 位數字及位置全中", "NT$50,000"], ["貳獎", "任 3 位數字及位置相同", "NT$5,000"], ["參獎", "任 2 位數字及位置相同", "NT$500"]],
+    url: "https://www.taiwanlottery.com/lotto/info/4_d/",
+  },
+};
 const GAME_RULES = {
   daily539: { name: "今彩 539", rule: "01–39 選 5 個不重複號碼", groups: [{ count: 5, max: 39 }] },
   lotto649: { name: "大樂透", rule: "01–49 選 6 個不重複號碼", groups: [{ count: 6, max: 49 }] },
@@ -20,6 +73,9 @@ const GAME_RULES = {
 
 let selectedGame = null;
 let historicalDraws = [];
+const historicalDrawsByGame = {};
+const historicalDataErrors = {};
+const historicalMetadata = {};
 let selectedStatsRange = "all";
 
 function secureRandomInt(max) {
@@ -63,10 +119,14 @@ function generateNumbers() {
 function selectGame(gameKey) {
   selectedGame = gameKey;
   const game = GAME_RULES[gameKey];
+  const hasStatistics = Boolean(HISTORICAL_GAMES[gameKey]);
   const hasFullGamePage = gameKey === "daily539";
   const supportsQuickPick = gameKey !== "bingo";
   document.querySelectorAll(".game-feature").forEach((element) => {
-    element.hidden = hasFullGamePage ? false : !(supportsQuickPick && element.id === "quick-pick");
+    const isQuickPick = supportsQuickPick && element.id === "quick-pick";
+    const isStatistics = hasStatistics && (element.id === "game-rules" || element.id === "historical-stats" || element.classList.contains("notice"));
+    const isDailyOnly = hasFullGamePage && (element.id === "ai-pick" || element.classList.contains("pair-section"));
+    element.hidden = !(isQuickPick || isStatistics || isDailyOnly);
   });
   document.querySelectorAll(".game-card").forEach((card) => {
     const isSelected = card.dataset.game === gameKey;
@@ -78,8 +138,11 @@ function selectGame(gameKey) {
   document.querySelector("#quick-pick-result").innerHTML = "<p>按下按鈕，產生你的隨機號碼</p>";
   updateAiAvailability();
   resetAiResults();
-  if (hasFullGamePage || supportsQuickPick) {
-    document.querySelector(hasFullGamePage ? "#daily539" : "#quick-pick")
+  if (hasStatistics) {
+    updateStatistics("all");
+  }
+  if (hasStatistics || supportsQuickPick) {
+    document.querySelector(hasStatistics ? "#game-rules" : "#quick-pick")
       .scrollIntoView({ behavior: "smooth", block: "start" });
   }
 }
@@ -105,8 +168,8 @@ function resetAiResults() {
   results.hidden = true;
 }
 
-function getDrawNumbers(draw) {
-  return NUMBER_COLUMNS.map((column) => Number(draw[column]));
+function getDrawNumbers(draw, columns = NUMBER_COLUMNS) {
+  return columns.map((column) => Number(draw[column]));
 }
 
 function rankByFrequency(draws) {
@@ -232,11 +295,11 @@ function parseCsv(text) {
   });
 }
 
-function calculateFrequency(draws) {
-  const frequencies = new Map(Array.from({ length: 39 }, (_, index) => [index + 1, 0]));
+function calculateFrequency(draws, numberMin = 1, numberMax = 39, columns = NUMBER_COLUMNS) {
+  const frequencies = new Map(Array.from({ length: numberMax - numberMin + 1 }, (_, index) => [index + numberMin, 0]));
 
   draws.forEach((draw) => {
-    NUMBER_COLUMNS.forEach((column) => {
+    columns.forEach((column) => {
       const number = Number(draw[column]);
       if (frequencies.has(number)) frequencies.set(number, frequencies.get(number) + 1);
     });
@@ -290,14 +353,14 @@ function renderPairError(message) {
   document.querySelector("#pair-ranking-body").innerHTML = `<tr><td class="pair-error" colspan="5">${message}</td></tr>`;
 }
 
-function renderRanking(element, numbers, highestCount) {
+function renderRanking(element, numbers, highestCount, config = HISTORICAL_GAMES.daily539) {
   element.innerHTML = numbers
     .map(({ number, count }, index) => {
       const relativeWidth = highestCount ? count / highestCount * 100 : 0;
       return `
         <li>
           <span class="rank">${String(index + 1).padStart(2, "0")}</span>
-          <span class="number-ball">${String(number).padStart(2, "0")}</span>
+          <span class="number-ball">${config.min === 0 ? number : String(number).padStart(2, "0")}</span>
           <span class="frequency-bar" aria-hidden="true"><span style="width: ${relativeWidth}%"></span></span>
           <span class="count">${count.toLocaleString("zh-TW")} 次</span>
         </li>`;
@@ -305,23 +368,23 @@ function renderRanking(element, numbers, highestCount) {
     .join("");
 }
 
-function calculateSpecialNumbers(draws) {
+function calculateSpecialNumbers(draws, config = HISTORICAL_GAMES.daily539) {
   const latestFirst = [...draws].reverse();
   const recentDraws = draws.slice(-10);
-  const recentCounts = new Map(calculateFrequency(recentDraws).map(({ number, count }) => [number, count]));
+  const recentCounts = new Map(calculateFrequency(recentDraws, config.min, config.max, config.columns).map(({ number, count }) => [number, count]));
   const specials = [];
 
-  for (let number = 1; number <= 39; number += 1) {
+  for (let number = config.min; number <= config.max; number += 1) {
     let missed = 0;
     for (const draw of latestFirst) {
-      if (getDrawNumbers(draw).includes(number)) break;
+      if (getDrawNumbers(draw, config.columns).includes(number)) break;
       missed += 1;
     }
     if (missed >= 3) specials.push({ number, value: missed, rule: `連續 ${missed} 期未開出`, priority: 1 });
 
     let appeared = 0;
     for (const draw of latestFirst) {
-      if (!getDrawNumbers(draw).includes(number)) break;
+      if (!getDrawNumbers(draw, config.columns).includes(number)) break;
       appeared += 1;
     }
     if (appeared >= 2) specials.push({ number, value: appeared, rule: `連續 ${appeared} 期開出`, priority: 2 });
@@ -335,12 +398,12 @@ function calculateSpecialNumbers(draws) {
   return specials.sort((a, b) => a.priority - b.priority || b.value - a.value || a.number - b.number);
 }
 
-function renderSpecialNumbers(draws) {
-  const specials = calculateSpecialNumbers(draws);
+function renderSpecialNumbers(draws, config) {
+  const specials = calculateSpecialNumbers(draws, config);
   document.querySelector("#special-numbers").innerHTML = specials.length
     ? specials.map(({ number, rule }) => `
       <li>
-        <span class="number-ball">${String(number).padStart(2, "0")}</span>
+        <span class="number-ball">${config.min === 0 ? number : String(number).padStart(2, "0")}</span>
         <span class="special-rule">${rule}</span>
       </li>`).join("")
     : '<li class="loading-row">目前沒有符合特殊規則的號碼。</li>';
@@ -368,9 +431,61 @@ function setStatsRangeControlsEnabled(enabled) {
   });
 }
 
+function renderStatisticsMessage(message) {
+  const markup = `<li class="loading-row error-message">${message}</li>`;
+  document.querySelector("#hot-numbers").innerHTML = markup;
+  document.querySelector("#cold-numbers").innerHTML = markup;
+  document.querySelector("#special-numbers").innerHTML = markup;
+  document.querySelector("#draw-count").textContent = "0";
+  document.querySelector("#date-range").textContent = "暫時無法取得";
+  document.querySelector("#last-updated").textContent = "—";
+}
+
+function updateStatisticsHeading(config) {
+  document.querySelector("#stats-eyebrow").textContent = config.eyebrow;
+  document.querySelector("#stats-title").innerHTML = `${config.title}<br />歷史數據統計`;
+  document.querySelector("#stats-description").textContent = config.min === 0
+    ? "統計每一期各位數的開獎結果，找出累計出現次數最高、最低與符合特殊規則的數字。"
+    : "統計每一期的開獎號碼，找出累計出現次數最高、最低與符合特殊規則的號碼。";
+  document.querySelector(".stats-range-options").setAttribute("aria-label", `${config.title} 統計區間`);
+}
+
+function formatTaipeiTime(value) {
+  if (!value) return "—";
+  return new Intl.DateTimeFormat("zh-TW", {
+    timeZone: "Asia/Taipei",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).format(new Date(value));
+}
+
+function updateGameRules(gameKey) {
+  const details = GAME_DETAILS[gameKey];
+  document.querySelector("#rules-game-name").textContent = GAME_RULES[gameKey].name;
+  document.querySelector("#rules-price").textContent = details.price;
+  document.querySelector("#rules-play").textContent = details.play;
+  document.querySelector("#rules-prize-body").innerHTML = details.prizes.map(([award, match, prize]) => `
+    <tr>
+      <th scope="row">${award}</th>
+      <td>${match}</td>
+      <td>${prize}</td>
+    </tr>`).join("");
+  document.querySelector("#rules-source").href = details.url;
+}
+
 function updateStatistics(range = selectedStatsRange) {
   selectedStatsRange = range;
-  const draws = getDrawsForStatsRange(historicalDraws, range);
+  const config = HISTORICAL_GAMES[selectedGame];
+  if (!config) return;
+  updateGameRules(selectedGame);
+  updateStatisticsHeading(config);
+  const availableDraws = historicalDrawsByGame[selectedGame] || [];
+  const draws = getDrawsForStatsRange(availableDraws, range);
+  setStatsRangeControlsEnabled(Boolean(availableDraws.length));
   document.querySelectorAll(".stats-range-button").forEach((button) => {
     const isSelected = button.dataset.range === String(range);
     button.classList.toggle("active", isSelected);
@@ -378,54 +493,69 @@ function updateStatistics(range = selectedStatsRange) {
   });
 
   if (!draws.length) {
-    const message = "所選區間沒有可用資料。";
-    document.querySelector("#hot-numbers").innerHTML = `<li class="loading-row error-message">${message}</li>`;
-    document.querySelector("#cold-numbers").innerHTML = `<li class="loading-row error-message">${message}</li>`;
-    document.querySelector("#special-numbers").innerHTML = `<li class="loading-row error-message">${message}</li>`;
-    document.querySelector("#draw-count").textContent = "0";
-    document.querySelector("#date-range").textContent = "暫時無資料";
-    renderPairError(message);
+    const message = historicalDataErrors[selectedGame] || "所選區間沒有可用資料。";
+    renderStatisticsMessage(message);
+    if (selectedGame === "daily539") renderPairError(message);
     return;
   }
 
-  const frequencies = calculateFrequency(draws);
+  const frequencies = calculateFrequency(draws, config.min, config.max, config.columns);
   const highestCount = Math.max(...frequencies.map(({ count }) => count));
   const hotNumbers = [...frequencies].sort((a, b) => b.count - a.count || a.number - b.number);
   const coldNumbers = [...frequencies].sort((a, b) => a.count - b.count || a.number - b.number);
 
-  renderRanking(document.querySelector("#hot-numbers"), hotNumbers, highestCount);
-  renderRanking(document.querySelector("#cold-numbers"), coldNumbers, highestCount);
-  renderSpecialNumbers(draws);
-  renderPairAnalysis(draws);
+  renderRanking(document.querySelector("#hot-numbers"), hotNumbers, highestCount, config);
+  renderRanking(document.querySelector("#cold-numbers"), coldNumbers, highestCount, config);
+  renderSpecialNumbers(draws, config);
+  if (selectedGame === "daily539") renderPairAnalysis(draws);
   document.querySelector("#draw-count").textContent = draws.length.toLocaleString("zh-TW");
   document.querySelector("#date-range").textContent = `${formatDate(draws[0].draw_date)}–${formatDate(draws.at(-1).draw_date)}`;
+  document.querySelector("#last-updated").textContent = formatTaipeiTime(historicalMetadata[selectedGame]?.collected_at);
 }
 
 async function loadStatistics() {
-  const hotElement = document.querySelector("#hot-numbers");
-  const coldElement = document.querySelector("#cold-numbers");
-
-  try {
-    const response = await fetch(CSV_PATH);
-    if (!response.ok) throw new Error(`資料讀取失敗 (${response.status})`);
-
-    const draws = parseCsv(await response.text());
-    if (!draws.length) throw new Error("歷史資料目前為空");
-    historicalDraws = draws;
-  } catch (error) {
-    const message = `<li class="loading-row error-message">${error.message}，請稍後再試。</li>`;
-    hotElement.innerHTML = message;
-    coldElement.innerHTML = message;
-    document.querySelector("#special-numbers").innerHTML = message;
-    document.querySelector("#date-range").textContent = "暫時無法取得";
-    renderPairError(error.message || "同期雙號資料暫時無法取得。");
-    setStatsRangeControlsEnabled(false);
-    return;
-  }
-
+  await Promise.all(Object.entries(HISTORICAL_GAMES).map(async ([gameKey, config]) => {
+    try {
+      const metadataPath = config.path.replace(/\.csv$/, ".metadata.json");
+      const [response, metadataResponse] = await Promise.all([fetch(config.path), fetch(metadataPath)]);
+      if (!response.ok || !metadataResponse.ok) throw new Error(`資料讀取失敗 (${response.status}/${metadataResponse.status})`);
+      const [draws, metadata] = await Promise.all([response.text().then(parseCsv), metadataResponse.json()]);
+      if (!draws.length) throw new Error("歷史資料目前為空");
+      historicalDrawsByGame[gameKey] = draws;
+      historicalMetadata[gameKey] = metadata;
+      if (gameKey === "daily539") historicalDraws = draws;
+    } catch (error) {
+      historicalDataErrors[gameKey] = `${error.message}，請稍後再試。`;
+    }
+  }));
   updateAiAvailability();
-  setStatsRangeControlsEnabled(true);
-  updateStatistics("all");
+  if (selectedGame && HISTORICAL_GAMES[selectedGame]) updateStatistics("all");
+}
+
+async function loadBulletin() {
+  const content = document.querySelector("#bulletin-content");
+  try {
+    const response = await fetch("data/bulletin.json");
+    if (!response.ok) throw new Error("速報資料尚未建立");
+    const bulletin = await response.json();
+    const items = [
+      ...(bulletin.jackpots || []).map((item) => `
+        <article class="bulletin-item jackpot-alert">
+          <p>累積獎金速報</p>
+          <h3>${item.game}累積金額約 ${Number(item.amount).toLocaleString("zh-TW")} 元</h3>
+          <span>下次開獎：${formatTaipeiTime(item.next_draw_at)}</span>
+        </article>`),
+      ...(bulletin.errors || []).map((game) => `
+        <article class="bulletin-item data-alert">
+          <p>資料更新異常</p>
+          <h3>${game}開獎後連續 3 次未能取得最新資料</h3>
+          <span>系統將於下一個開獎更新時段再次嘗試。</span>
+        </article>`),
+    ];
+    content.innerHTML = items.length ? items.join("") : '<p class="bulletin-empty">目前沒有超過 20 億元的累積獎金或資料更新異常。</p>';
+  } catch (error) {
+    content.innerHTML = `<p class="bulletin-empty">${error.message}</p>`;
+  }
 }
 
 document.querySelector("#current-year").textContent = new Date().getFullYear();
@@ -440,3 +570,4 @@ document.querySelectorAll(".stats-range-button").forEach((button) => {
   button.addEventListener("click", () => updateStatistics(button.dataset.range));
 });
 loadStatistics();
+loadBulletin();
