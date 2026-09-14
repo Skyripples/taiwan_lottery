@@ -4,7 +4,9 @@ on:
   workflow_dispatch:
   schedule:
     # 21:30, 22:30, and 23:30 Asia/Taipei, Monday through Saturday.
-    - cron: "30 13,14,15 * * 1-6"
+    - cron: "30 13 * * 1-6"
+    - cron: "30 14 * * 1-6"
+    - cron: "30 15 * * 1-6"
 
 permissions:
   contents: write
@@ -21,10 +23,11 @@ jobs:
         shell: bash
         run: |
           if [[ "${{ github.event_name }}" == "schedule" ]]; then
-            case "$(date -u +%H)" in
-              13) attempt=1 ;;
-              14) attempt=2 ;;
-              15) attempt=3 ;;
+            case "${{ github.event.schedule }}" in
+              "30 13 * * 1-6") attempt=1 ;;
+              "30 14 * * 1-6") attempt=2 ;;
+              "30 15 * * 1-6") attempt=3 ;;
+              *) echo "::error::Unknown update schedule: ${{ github.event.schedule }}"; exit 1 ;;
             esac
           else
             attempt=0

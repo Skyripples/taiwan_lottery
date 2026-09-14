@@ -371,7 +371,12 @@ function renderRanking(element, numbers, highestCount, config = HISTORICAL_GAMES
 function calculateSpecialNumbers(draws, config = HISTORICAL_GAMES.daily539) {
   const latestFirst = [...draws].reverse();
   const recentDraws = draws.slice(-10);
-  const recentCounts = new Map(calculateFrequency(recentDraws, config.min, config.max, config.columns).map(({ number, count }) => [number, count]));
+  const recentCounts = new Map(Array.from({ length: config.max - config.min + 1 }, (_, index) => [index + config.min, 0]));
+  recentDraws.forEach((draw) => {
+    new Set(getDrawNumbers(draw, config.columns)).forEach((number) => {
+      if (recentCounts.has(number)) recentCounts.set(number, recentCounts.get(number) + 1);
+    });
+  });
   const specials = [];
 
   for (let number = config.min; number <= config.max; number += 1) {
@@ -391,7 +396,7 @@ function calculateSpecialNumbers(draws, config = HISTORICAL_GAMES.daily539) {
 
     const recentCount = recentCounts.get(number) || 0;
     if (recentDraws.length >= 5 && recentCount >= 3) {
-      specials.push({ number, value: recentCount, rule: `最近 ${recentDraws.length} 期開出 ${recentCount} 次`, priority: 3 });
+      specials.push({ number, value: recentCount, rule: `最近 ${recentDraws.length} 期中，有 ${recentCount} 期出現此數字（不限位置）`, priority: 3 });
     }
   }
 
@@ -445,7 +450,7 @@ function updateStatisticsHeading(config) {
   document.querySelector("#stats-eyebrow").textContent = config.eyebrow;
   document.querySelector("#stats-title").innerHTML = `${config.title}<br />歷史數據統計`;
   document.querySelector("#stats-description").textContent = config.min === 0
-    ? "統計每一期各位數的開獎結果，找出累計出現次數最高、最低與符合特殊規則的數字。"
+    ? "冷熱統計為各位置合計出現次數，同期重複數字分別計次；特殊規則另以逐期出現情形計算。"
     : "統計每一期的開獎號碼，找出累計出現次數最高、最低與符合特殊規則的號碼。";
   document.querySelector(".stats-range-options").setAttribute("aria-label", `${config.title} 統計區間`);
 }
@@ -545,10 +550,10 @@ async function loadBulletin() {
           <h3>${item.game}累積金額約 ${Number(item.amount).toLocaleString("zh-TW")} 元</h3>
           <span>下次開獎：${formatTaipeiTime(item.next_draw_at)}</span>
         </article>`),
-      ...(bulletin.errors || []).map((game) => `
+      ...(bulletin.errors || []).map((message) => `
         <article class="bulletin-item data-alert">
           <p>資料更新異常</p>
-          <h3>${game}開獎後連續 3 次未能取得最新資料</h3>
+          <h3>${message}</h3>
           <span>系統將於下一個開獎更新時段再次嘗試。</span>
         </article>`),
     ];

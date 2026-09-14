@@ -81,7 +81,7 @@ def build(latest: dict[str, object], now: datetime, attempt: int) -> dict[str, o
     return {
         "generated_at": now.isoformat(),
         "jackpots": jackpots,
-        "errors": [GAMES[key]["name"] for key in stale] if attempt >= 3 else [],
+        "errors": ["本日最後一次排程更新未能確認最新資料"] if stale and attempt >= 3 else [],
     }
 
 
@@ -106,7 +106,7 @@ def main() -> None:
         payload = {
             "generated_at": now.isoformat(),
             "jackpots": existing.get("jackpots", []),
-            "errors": [GAMES[key]["name"] for key in expected_games(now)],
+            "errors": ["本日最後一次排程更新未能確認最新資料"],
         }
     else:
         payload = build(fetch_latest(), now, args.attempt)
