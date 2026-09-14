@@ -77,6 +77,10 @@ const historicalDrawsByGame = {};
 const historicalDataErrors = {};
 const historicalMetadata = {};
 let selectedStatsRange = "all";
+const AI_STRATEGY_VERSION = "539-v1";
+const AI_WARMUP_DRAWS = 120;
+let aiRenderToken = 0;
+let aiBacktestCache = { key: "", promise: null, results: null };
 
 function secureRandomInt(max) {
   const range = 0x100000000;
@@ -163,6 +167,7 @@ function showHome() {
 }
 
 function resetAiResults() {
+  aiRenderToken += 1;
   const results = document.querySelector("#ai-results");
   results.innerHTML = "";
   results.hidden = true;
@@ -207,12 +212,13 @@ function combineUnique(...lists) {
   return result;
 }
 
-function weightedPick(ranked, count) {
+function weightedPick(ranked, count, random = () => secureRandomInt(1000000) / 1000000) {
   const pool = ranked.map(({ number, count: frequency }) => ({ number, weight: frequency }));
   const result = [];
   while (result.length < count) {
     const total = pool.reduce((sum, item) => sum + item.weight, 0);
-    let target = (secureRandomInt(1000000) / 1000000) * total;
+    if (!pool.length || total <= 0) return [];
+    let target = random() * total;
     let selectedIndex = 0;
     for (let index = 0; index < pool.length; index += 1) {
       target -= pool[index].weight;
@@ -223,7 +229,20 @@ function weightedPick(ranked, count) {
   return result.sort((a, b) => a - b);
 }
 
-function buildAiPicks(draws) {
+const AI_STRATEGIES = [
+  { id: "all-hot", title: "歷年熱門組" },
+  { id: "all-cold", title: "歷年冷門組" },
+  { id: "hot-streak", title: "熱門＋連莊組" },
+  { id: "recent-hot", title: "近期熱門組" },
+  { id: "overdue", title: "久未開出組" },
+  { id: "hot-cold", title: "冷熱混合組" },
+  { id: "momentum", title: "近期升溫組" },
+  { id: "odd-even", title: "奇偶平衡組" },
+  { id: "low-high", title: "大小平衡組" },
+  { id: "weighted", title: "頻率加權組" },
+];
+
+function buildAiContext(draws) {
   const ranked = rankByFrequency(draws);
   const hot = ranked.map(({ number }) => number);
   const cold = [...ranked]
@@ -244,22 +263,168 @@ function buildAiPicks(draws) {
   const highHot = hot.filter((number) => number > 20);
   const mean = draws.length * 5 / 39;
   const neutral = [...ranked].sort((a, b) => Math.abs(a.count - mean) - Math.abs(b.count - mean) || a.number - b.number);
-
-  return [
-    { title: "歷年熱門組", numbers: hot.slice(0, 5), reason: "選用歷年累計出現次數最高的 5 個號碼。" },
-    { title: "歷年冷門組", numbers: cold.slice(0, 5), reason: "選用歷年累計出現次數最低的 5 個號碼。" },
-    { title: "熱門＋連莊組", numbers: combineUnique(hot.slice(0, 4), [streakChoice.number]).slice(0, 5), reason: `4 個歷年熱門號碼，加上曾連續 ${streakChoice.streak} 期開出的 ${String(streakChoice.number).padStart(2, "0")} 號。` },
-    { title: "近期熱門組", numbers: recent.slice(0, 5), reason: "選用最近 60 期中出現次數最高的 5 個號碼。" },
-    { title: "久未開出組", numbers: overdue.slice(0, 5).map(({ number }) => number), reason: `選用目前間隔期數最長的號碼，最久的 ${String(overdue[0].number).padStart(2, "0")} 號已間隔 ${overdue[0].overdue} 期。` },
-    { title: "冷熱混合組", numbers: combineUnique(hot.slice(0, 3), cold.slice(0, 2)).slice(0, 5), reason: "組合 3 個歷年熱門號碼與 2 個歷年冷門號碼。" },
-    { title: "近期升溫組", numbers: momentum.slice(0, 5).map(({ number }) => number), reason: "比較前後各 60 期，選出近期出現次數成長最明顯的號碼。" },
-    { title: "奇偶平衡組", numbers: combineUnique(oddHot.slice(0, 3), evenHot.slice(0, 2)).slice(0, 5), reason: "依歷年熱度挑選，配置為 3 個奇數與 2 個偶數。" },
-    { title: "大小平衡組", numbers: combineUnique(lowHot.slice(0, 3), highHot.slice(0, 2)).slice(0, 5), reason: "依歷年熱度挑選，配置為 3 個低號（01–20）與 2 個高號（21–39）。" },
-    { title: "頻率加權組", numbers: weightedPick(ranked, 5), reason: "依歷年出現頻率加權隨機抽取，保留變化且不重複選號。" },
-  ].map((pick) => ({ ...pick, numbers: [...pick.numbers].sort((a, b) => a - b) }));
+  return { ranked, hot, cold, recent, momentum, streaks, overdue, streakChoice, oddHot, evenHot, lowHot, highHot, neutral };
 }
 
-function renderAiPicks(picks) {
+function selectAiStrategy(strategyId, context, random) {
+  const { ranked, hot, cold, recent, momentum, streakChoice, overdue, oddHot, evenHot, lowHot, highHot } = context;
+  const selections = {
+    "all-hot": () => hot.slice(0, 5),
+    "all-cold": () => cold.slice(0, 5),
+    "hot-streak": () => streakChoice ? combineUnique(hot.slice(0, 4), [streakChoice.number]).slice(0, 5) : [],
+    "recent-hot": () => recent.slice(0, 5),
+    overdue: () => overdue.slice(0, 5).map(({ number }) => number),
+    "hot-cold": () => combineUnique(hot.slice(0, 3), cold.slice(0, 2)).slice(0, 5),
+    momentum: () => momentum.slice(0, 5).map(({ number }) => number),
+    "odd-even": () => combineUnique(oddHot.slice(0, 3), evenHot.slice(0, 2)).slice(0, 5),
+    "low-high": () => combineUnique(lowHot.slice(0, 3), highHot.slice(0, 2)).slice(0, 5),
+    weighted: () => weightedPick(ranked, 5, random),
+  };
+  return selections[strategyId] ? selections[strategyId]().sort((a, b) => a - b) : [];
+}
+
+function getAiReason(strategyId, context) {
+  const reasons = {
+    "all-hot": "選用歷年累計出現次數最高的 5 個號碼。",
+    "all-cold": "選用歷年累計出現次數最低的 5 個號碼。",
+    "hot-streak": context.streakChoice ? `4 個歷年熱門號碼，加上曾連續 ${context.streakChoice.streak} 期開出的 ${String(context.streakChoice.number).padStart(2, "0")} 號。` : "目前資料不足以建立熱門與連莊組合。",
+    "recent-hot": "選用最近 60 期中出現次數最高的 5 個號碼。",
+    overdue: context.overdue[0] ? `選用目前間隔期數最長的號碼，最久的 ${String(context.overdue[0].number).padStart(2, "0")} 號已間隔 ${context.overdue[0].overdue} 期。` : "目前資料不足以計算遺漏期數。",
+    "hot-cold": "組合 3 個歷年熱門號碼與 2 個歷年冷門號碼。",
+    momentum: "比較前後各 60 期，選出近期出現次數成長最明顯的號碼。",
+    "odd-even": "依歷年熱度挑選，配置為 3 個奇數與 2 個偶數。",
+    "low-high": "依歷年熱度挑選，配置為 3 個低號（01–20）與 2 個高號（21–39）。",
+    weighted: "依歷年出現頻率加權隨機抽取，保留變化且不重複選號。",
+  };
+  return reasons[strategyId];
+}
+
+function buildAiPicks(draws, randomForStrategy = () => () => secureRandomInt(1000000) / 1000000) {
+  const context = buildAiContext(draws);
+  return AI_STRATEGIES.map((strategy) => ({
+    ...strategy,
+    numbers: selectAiStrategy(strategy.id, context, randomForStrategy(strategy)),
+    reason: getAiReason(strategy.id, context),
+  }));
+}
+
+function hashText(text, seed = 2166136261) {
+  let hash = seed >>> 0;
+  for (let index = 0; index < text.length; index += 1) {
+    hash ^= text.charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+  return hash >>> 0;
+}
+
+function createSeededRandom(seedText) {
+  let state = hashText(seedText);
+  return () => {
+    state += 0x6D2B79F5;
+    let value = state;
+    value = Math.imul(value ^ value >>> 15, value | 1);
+    value ^= value + Math.imul(value ^ value >>> 7, value | 61);
+    return ((value ^ value >>> 14) >>> 0) / 4294967296;
+  };
+}
+
+function isValidAiPick(numbers) {
+  return numbers.length === 5
+    && new Set(numbers).size === 5
+    && numbers.every((number) => Number.isInteger(number) && number >= 1 && number <= 39);
+}
+
+function getAiDataKey(draws) {
+  let hash = 2166136261;
+  draws.forEach((draw) => {
+    hash = hashText(`${draw.draw_date}|${draw.draw_no}|${getDrawNumbers(draw).join(",")};`, hash);
+  });
+  return `${AI_STRATEGY_VERSION}:${draws.length}:${hash}`;
+}
+
+async function calculateAiBacktests(draws) {
+  const sortedDraws = getDrawsForStatsRange(draws, "all");
+  const targets = sortedDraws.slice(AI_WARMUP_DRAWS);
+  const results = AI_STRATEGIES.map((strategy) => ({
+    id: strategy.id,
+    startDate: targets[0]?.draw_date || "",
+    endDate: targets.at(-1)?.draw_date || "",
+    effective: 0,
+    skipped: 0,
+    hit5: 0,
+    hit4: 0,
+    hit3: 0,
+    hit2: 0,
+    noPrize: 0,
+  }));
+
+  for (let targetIndex = AI_WARMUP_DRAWS; targetIndex < sortedDraws.length; targetIndex += 1) {
+    const pastDraws = sortedDraws.slice(0, targetIndex);
+    const targetDraw = sortedDraws[targetIndex];
+    const targetId = `${targetDraw.draw_date}|${targetDraw.draw_no}`;
+    const picks = buildAiPicks(pastDraws, (strategy) =>
+      createSeededRandom(`${AI_STRATEGY_VERSION}|${strategy.id}|${targetId}`));
+    const actualNumbers = new Set(getDrawNumbers(targetDraw));
+
+    picks.forEach((pick, strategyIndex) => {
+      const result = results[strategyIndex];
+      if (!isValidAiPick(pick.numbers)) {
+        result.skipped += 1;
+        return;
+      }
+      result.effective += 1;
+      const matches = pick.numbers.filter((number) => actualNumbers.has(number)).length;
+      if (matches >= 2) result[`hit${matches}`] += 1;
+      else result.noPrize += 1;
+    });
+
+    if ((targetIndex - AI_WARMUP_DRAWS + 1) % 20 === 0) {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    }
+  }
+  return results;
+}
+
+function getAiBacktests(draws) {
+  const key = getAiDataKey(draws);
+  if (aiBacktestCache.key === key) {
+    if (aiBacktestCache.results) return Promise.resolve(aiBacktestCache.results);
+    if (aiBacktestCache.promise) return aiBacktestCache.promise;
+  }
+  const promise = calculateAiBacktests(draws).then((results) => {
+    if (aiBacktestCache.key === key) aiBacktestCache.results = results;
+    return results;
+  });
+  aiBacktestCache = { key, promise, results: null };
+  return promise;
+}
+
+function renderAiBacktest(backtest) {
+  if (!backtest) return '<div class="ai-backtest ai-backtest-loading">規則逐期回測計算中…</div>';
+  const winningPeriods = backtest.hit5 + backtest.hit4 + backtest.hit3 + backtest.hit2;
+  const winningRate = backtest.effective ? winningPeriods / backtest.effective * 100 : 0;
+  const dateRange = backtest.startDate && backtest.endDate
+    ? `${formatDate(backtest.startDate)}–${formatDate(backtest.endDate)}`
+    : "—";
+  return `
+    <div class="ai-backtest">
+      <h4>規則逐期回測</h4>
+      <dl>
+        <div><dt>回測日期範圍</dt><dd>${dateRange}</dd></div>
+        <div><dt>有效期數</dt><dd>${backtest.effective.toLocaleString("zh-TW")}</dd></div>
+        <div><dt>略過期數</dt><dd>${backtest.skipped.toLocaleString("zh-TW")}</dd></div>
+        <div><dt>頭獎（中 5）</dt><dd>${backtest.hit5.toLocaleString("zh-TW")}</dd></div>
+        <div><dt>二獎（中 4）</dt><dd>${backtest.hit4.toLocaleString("zh-TW")}</dd></div>
+        <div><dt>三獎（中 3）</dt><dd>${backtest.hit3.toLocaleString("zh-TW")}</dd></div>
+        <div><dt>四獎（中 2）</dt><dd>${backtest.hit2.toLocaleString("zh-TW")}</dd></div>
+        <div><dt>未中獎（中 0 或 1）</dt><dd>${backtest.noPrize.toLocaleString("zh-TW")}</dd></div>
+        <div><dt>中獎率</dt><dd>${winningRate.toFixed(2)}%</dd></div>
+      </dl>
+      <p>歷史規則回測，不代表事前預測紀錄或未來保證。</p>
+    </div>`;
+}
+
+function renderAiPicks(picks, backtests = null) {
   const results = document.querySelector("#ai-results");
   results.hidden = false;
   results.innerHTML = picks.map((pick, index) => `
@@ -269,6 +434,7 @@ function renderAiPicks(picks) {
         <h3>${pick.title}</h3>
         <div class="ai-number-row">${pick.numbers.map((number) => `<span class="ai-number">${String(number).padStart(2, "0")}</span>`).join("")}</div>
         <p class="ai-reason"><strong>選號依據：</strong>${pick.reason}</p>
+        ${renderAiBacktest(backtests?.[index])}
       </div>
     </article>`).join("");
 }
@@ -279,10 +445,14 @@ function updateAiAvailability() {
   button.disabled = !supportsAi || !historicalDraws.length;
 }
 
-function generateAiPicks() {
+async function generateAiPicks() {
   if (selectedGame !== "daily539" || !historicalDraws.length) return;
-  renderAiPicks(buildAiPicks(historicalDraws));
+  const token = ++aiRenderToken;
+  const picks = buildAiPicks(historicalDraws);
+  renderAiPicks(picks);
   document.querySelector("#ai-pick").scrollIntoView({ behavior: "smooth", block: "start" });
+  const backtests = await getAiBacktests(historicalDraws);
+  if (token === aiRenderToken && selectedGame === "daily539") renderAiPicks(picks, backtests);
 }
 
 function parseCsv(text) {

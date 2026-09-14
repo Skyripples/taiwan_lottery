@@ -183,6 +183,15 @@ main { display: flex; flex-direction: column; }
 .ai-number { width: 37px; height: 37px; display: grid; place-items: center; color: white; background: var(--green); border-radius: 50%; font: 700 13px "Outfit", sans-serif; box-shadow: inset -3px -4px 6px rgba(0,0,0,.13); }
 .ai-reason { margin: 0; color: var(--muted); font-size: 12px; line-height: 1.7; }
 .ai-reason strong { color: #47534e; }
+.ai-backtest { margin-top: 18px; padding-top: 17px; border-top: 1px solid var(--line); }
+.ai-backtest h4 { margin-bottom: 12px; color: var(--green-dark); font-size: 13px; }
+.ai-backtest dl { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 16px; }
+.ai-backtest dl div { display: flex; justify-content: space-between; gap: 10px; }
+.ai-backtest dl div:first-child { grid-column: 1 / -1; }
+.ai-backtest dt { color: var(--muted); font-size: 11px; }
+.ai-backtest dd { margin: 0; font: 700 12px "Outfit", "Noto Sans TC", sans-serif; text-align: right; }
+.ai-backtest > p { margin: 13px 0 0; color: #7d8883; font-size: 10px; line-height: 1.6; }
+.ai-backtest-loading { color: var(--muted); font-size: 12px; }
 
 .stats-section { padding-inline: max(24px, calc((100% - 1440px) / 2)); display: grid; grid-template-columns: .5fr 1.5fr; gap: clamp(32px, 4vw, 64px); background: var(--green-dark); color: white; }
 .stats-intro { padding-top: 6px; }
@@ -269,6 +278,8 @@ footer p { margin: 0; font-size: 11px; }
   .section-heading { display: block; }
   .section-heading > p { margin-top: 16px; }
   .game-grid, .rankings { grid-template-columns: 1fr; }
+  .ai-backtest dl { grid-template-columns: 1fr; }
+  .ai-backtest dl div:first-child { grid-column: auto; }
   .game-card { min-height: 154px; }
   .dataset-summary { margin-bottom: 10px; }
   .stats-range-button { flex: 1 1 calc(50% - 7px); }
