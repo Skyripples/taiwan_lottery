@@ -81,6 +81,8 @@ const AI_STRATEGY_VERSION = "539-v1";
 const AI_WARMUP_DRAWS = 120;
 let aiRenderToken = 0;
 let aiBacktestCache = { key: "", promise: null, results: null };
+let displayedAiPicks = [];
+let displayedAiBacktests = [];
 
 function secureRandomInt(max) {
   const range = 0x100000000;
@@ -140,8 +142,9 @@ function selectGame(gameKey) {
   document.querySelector("#selected-game-name").textContent = game.name;
   document.querySelector("#selected-game-rule").textContent = game.rule;
   document.querySelector("#quick-pick-result").innerHTML = "<p>按下按鈕，產生你的隨機號碼</p>";
-  updateAiAvailability();
   resetAiResults();
+  updateAiAvailability();
+  showAiRecommendations();
   if (hasStatistics) {
     updateStatistics("all");
   }
@@ -168,6 +171,10 @@ function showHome() {
 
 function resetAiResults() {
   aiRenderToken += 1;
+  displayedAiPicks = [];
+  displayedAiBacktests = [];
+  document.querySelector("#ai-sort-controls").hidden = true;
+  document.querySelector("#ai-sort-order").value = "recommendation-asc";
   const results = document.querySelector("#ai-results");
   results.innerHTML = "";
   results.hidden = true;
@@ -400,7 +407,6 @@ function getAiBacktests(draws) {
 }
 
 function renderAiBacktest(backtest) {
-  if (!backtest) return '<div class="ai-backtest ai-backtest-loading">規則逐期回測計算中…</div>';
   const winningPeriods = backtest.hit5 + backtest.hit4 + backtest.hit3 + backtest.hit2;
   const winningRate = backtest.effective ? winningPeriods / backtest.effective * 100 : 0;
   const dateRange = backtest.startDate && backtest.endDate
@@ -428,15 +434,44 @@ function renderAiPicks(picks, backtests = null) {
   const results = document.querySelector("#ai-results");
   results.hidden = false;
   results.innerHTML = picks.map((pick, index) => `
-    <article class="ai-pick-card" style="animation-delay:${index * 45}ms">
-      <span class="ai-pick-index">${String(index + 1).padStart(2, "0")}</span>
+    <article class="ai-pick-card${backtests ? " has-backtest" : ""}" style="animation-delay:${index * 45}ms">
+      <span class="ai-pick-index">${String(AI_STRATEGIES.findIndex((strategy) => strategy.id === pick.id) + 1).padStart(2, "0")}</span>
       <div class="ai-pick-content">
         <h3>${pick.title}</h3>
         <div class="ai-number-row">${pick.numbers.map((number) => `<span class="ai-number">${String(number).padStart(2, "0")}</span>`).join("")}</div>
         <p class="ai-reason"><strong>選號依據：</strong>${pick.reason}</p>
-        ${renderAiBacktest(backtests?.[index])}
       </div>
+      ${backtests ? renderAiBacktest(backtests[index]) : ""}
     </article>`).join("");
+}
+
+function winningPeriods(backtest) {
+  return backtest.hit5 + backtest.hit4 + backtest.hit3 + backtest.hit2;
+}
+
+function renderSortedAiBacktests() {
+  if (!displayedAiBacktests.length) return;
+  const order = document.querySelector("#ai-sort-order").value;
+  const strategyOrder = new Map(AI_STRATEGIES.map((strategy, index) => [strategy.id, index]));
+  const entries = displayedAiPicks.map((pick) => ({
+    pick,
+    backtest: displayedAiBacktests.find((result) => result.id === pick.id),
+  }));
+  const direction = order.endsWith("-asc") ? 1 : -1;
+  entries.sort((first, second) => {
+    const originalDifference = strategyOrder.get(first.pick.id) - strategyOrder.get(second.pick.id);
+    if (order.startsWith("recommendation")) return originalDifference * direction;
+    const firstWins = winningPeriods(first.backtest);
+    const secondWins = winningPeriods(second.backtest);
+    const firstValue = order.startsWith("rate")
+      ? (first.backtest.effective ? firstWins / first.backtest.effective : 0)
+      : firstWins;
+    const secondValue = order.startsWith("rate")
+      ? (second.backtest.effective ? secondWins / second.backtest.effective : 0)
+      : secondWins;
+    return (firstValue - secondValue) * direction || originalDifference;
+  });
+  renderAiPicks(entries.map(({ pick }) => pick), entries.map(({ backtest }) => backtest));
 }
 
 function updateAiAvailability() {
@@ -445,14 +480,37 @@ function updateAiAvailability() {
   button.disabled = !supportsAi || !historicalDraws.length;
 }
 
-async function generateAiPicks() {
+function showAiRecommendations() {
+  if (selectedGame !== "daily539" || !historicalDraws.length) return;
+  displayedAiPicks = buildAiPicks(historicalDraws);
+  renderAiPicks(displayedAiPicks);
+}
+
+async function runAiBacktests() {
   if (selectedGame !== "daily539" || !historicalDraws.length) return;
   const token = ++aiRenderToken;
-  const picks = buildAiPicks(historicalDraws);
+  const button = document.querySelector("#generate-ai-picks");
+  const picks = displayedAiPicks.length ? displayedAiPicks : buildAiPicks(historicalDraws);
+  displayedAiPicks = picks;
+  displayedAiBacktests = [];
+  document.querySelector("#ai-sort-controls").hidden = true;
   renderAiPicks(picks);
+  button.disabled = true;
+  button.textContent = "回測計算中…";
   document.querySelector("#ai-pick").scrollIntoView({ behavior: "smooth", block: "start" });
-  const backtests = await getAiBacktests(historicalDraws);
-  if (token === aiRenderToken && selectedGame === "daily539") renderAiPicks(picks, backtests);
+  try {
+    const backtests = await getAiBacktests(historicalDraws);
+    if (token === aiRenderToken && selectedGame === "daily539") {
+      displayedAiBacktests = backtests;
+      document.querySelector("#ai-sort-controls").hidden = false;
+      renderSortedAiBacktests();
+    }
+  } finally {
+    if (token === aiRenderToken && selectedGame === "daily539") {
+      button.textContent = "歷史回測";
+      updateAiAvailability();
+    }
+  }
 }
 
 function parseCsv(text) {
@@ -657,33 +715,8 @@ async function loadStatistics() {
     }
   }));
   updateAiAvailability();
+  showAiRecommendations();
   if (selectedGame && HISTORICAL_GAMES[selectedGame]) updateStatistics("all");
-}
-
-async function loadBulletin() {
-  const content = document.querySelector("#bulletin-content");
-  try {
-    const response = await fetch("data/bulletin.json");
-    if (!response.ok) throw new Error("速報資料尚未建立");
-    const bulletin = await response.json();
-    const items = [
-      ...(bulletin.jackpots || []).map((item) => `
-        <article class="bulletin-item jackpot-alert">
-          <p>累積獎金速報</p>
-          <h3>${item.game}累積金額約 ${Number(item.amount).toLocaleString("zh-TW")} 元</h3>
-          <span>下次開獎：${formatTaipeiTime(item.next_draw_at)}</span>
-        </article>`),
-      ...(bulletin.errors || []).map((message) => `
-        <article class="bulletin-item data-alert">
-          <p>資料更新異常</p>
-          <h3>${message}</h3>
-          <span>系統將於下一個開獎更新時段再次嘗試。</span>
-        </article>`),
-    ];
-    content.innerHTML = items.length ? items.join("") : '<p class="bulletin-empty">目前沒有超過 20 億元的累積獎金或資料更新異常。</p>';
-  } catch (error) {
-    content.innerHTML = `<p class="bulletin-empty">${error.message}</p>`;
-  }
 }
 
 document.querySelector("#current-year").textContent = new Date().getFullYear();
@@ -693,9 +726,9 @@ document.querySelector("#home-link").addEventListener("click", (event) => {
   showHome();
 });
 document.querySelector("#generate-numbers").addEventListener("click", generateNumbers);
-document.querySelector("#generate-ai-picks").addEventListener("click", generateAiPicks);
+document.querySelector("#generate-ai-picks").addEventListener("click", runAiBacktests);
+document.querySelector("#ai-sort-order").addEventListener("change", renderSortedAiBacktests);
 document.querySelectorAll(".stats-range-button").forEach((button) => {
   button.addEventListener("click", () => updateStatistics(button.dataset.range));
 });
 loadStatistics();
-loadBulletin();

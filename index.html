@@ -14,8 +14,8 @@
       href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;600;700;800&family=Outfit:wght@600;700&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="styles.css?v=1.8.0" />
-    <script src="app.js?v=1.8.0" defer></script>
+    <link rel="stylesheet" href="styles.css?v=1.9.0" />
+    <script src="app.js?v=1.9.0" defer></script>
   </head>
   <body>
     <header class="site-header">
@@ -28,18 +28,6 @@
     </header>
 
     <main id="top">
-      <section class="section bulletin-section" aria-labelledby="bulletin-title">
-        <div class="section-heading">
-          <div>
-            <p class="eyebrow">TODAY'S UPDATE</p>
-            <h2 id="bulletin-title">今日速報</h2>
-          </div>
-        </div>
-        <div class="bulletin-content" id="bulletin-content" aria-live="polite">
-          <p class="bulletin-empty">正在讀取今日速報…</p>
-        </div>
-      </section>
-
       <section class="section games-section" id="games">
         <div class="section-heading">
           <div>
@@ -112,8 +100,19 @@
             <h2>智慧選號</h2>
           </div>
           <button class="ai-generate-button" id="generate-ai-picks" type="button" disabled>
-            智慧選號
+            歷史回測
           </button>
+        </div>
+        <div class="ai-sort-controls" id="ai-sort-controls" hidden>
+          <label for="ai-sort-order">回測結果排序</label>
+          <select id="ai-sort-order">
+            <option value="recommendation-asc">推薦順序：升冪</option>
+            <option value="recommendation-desc">推薦順序：降冪</option>
+            <option value="rate-desc">中獎率：高到低</option>
+            <option value="rate-asc">中獎率：低到高</option>
+            <option value="wins-desc">中獎數：高到低</option>
+            <option value="wins-asc">中獎數：低到高</option>
+          </select>
         </div>
         <div class="ai-results" id="ai-results" aria-live="polite" hidden></div>
       </section>
