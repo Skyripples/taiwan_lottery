@@ -129,7 +129,7 @@ function selectGame(gameKey) {
   document.querySelectorAll(".game-feature").forEach((element) => {
     const isQuickPick = supportsQuickPick && element.id === "quick-pick";
     const isStatistics = hasStatistics && (element.id === "game-rules" || element.id === "historical-stats" || element.classList.contains("notice"));
-    const isDailyOnly = hasFullGamePage && (element.id === "ai-pick" || element.classList.contains("pair-section"));
+    const isDailyOnly = hasFullGamePage && element.id === "ai-pick";
     element.hidden = !(isQuickPick || isStatistics || isDailyOnly);
   });
   document.querySelectorAll(".game-card").forEach((card) => {
@@ -478,51 +478,6 @@ function calculateFrequency(draws, numberMin = 1, numberMax = 39, columns = NUMB
   return [...frequencies].map(([number, count]) => ({ number, count }));
 }
 
-function calculatePairFrequency(draws) {
-  const pairs = [];
-  const pairByKey = new Map();
-  for (let first = 1; first <= 38; first += 1) {
-    for (let second = first + 1; second <= 39; second += 1) {
-      const pair = { first, second, count: 0 };
-      pairs.push(pair);
-      pairByKey.set(`${first}-${second}`, pair);
-    }
-  }
-
-  draws.forEach((draw) => {
-    const numbers = [...new Set(getDrawNumbers(draw))].sort((a, b) => a - b);
-    for (let firstIndex = 0; firstIndex < numbers.length - 1; firstIndex += 1) {
-      for (let secondIndex = firstIndex + 1; secondIndex < numbers.length; secondIndex += 1) {
-        pairByKey.get(`${numbers[firstIndex]}-${numbers[secondIndex]}`).count += 1;
-      }
-    }
-  });
-
-  return pairs.sort((a, b) => b.count - a.count || a.first - b.first || a.second - b.second);
-}
-
-function renderPairAnalysis(draws) {
-  if (!draws.length) {
-    renderPairError("所選區間沒有可用資料。");
-    return;
-  }
-  const pairs = calculatePairFrequency(draws);
-  document.querySelector("#pair-draw-count").textContent = draws.length.toLocaleString("zh-TW");
-  document.querySelector("#pair-ranking-body").innerHTML = pairs.slice(0, 10).map((pair, index) => `
-    <tr>
-      <td class="pair-rank">${String(index + 1).padStart(2, "0")}</td>
-      <td><span class="pair-ball">${String(pair.first).padStart(2, "0")}</span></td>
-      <td><span class="pair-ball">${String(pair.second).padStart(2, "0")}</span></td>
-      <td>${pair.count.toLocaleString("zh-TW")} 次</td>
-      <td>${(pair.count / draws.length * 100).toFixed(2)}%</td>
-    </tr>`).join("");
-}
-
-function renderPairError(message) {
-  document.querySelector("#pair-draw-count").textContent = "—";
-  document.querySelector("#pair-ranking-body").innerHTML = `<tr><td class="pair-error" colspan="5">${message}</td></tr>`;
-}
-
 function renderRanking(element, numbers, highestCount, config = HISTORICAL_GAMES.daily539) {
   element.innerHTML = numbers
     .map(({ number, count }, index) => {
@@ -670,7 +625,6 @@ function updateStatistics(range = selectedStatsRange) {
   if (!draws.length) {
     const message = historicalDataErrors[selectedGame] || "所選區間沒有可用資料。";
     renderStatisticsMessage(message);
-    if (selectedGame === "daily539") renderPairError(message);
     return;
   }
 
@@ -682,7 +636,6 @@ function updateStatistics(range = selectedStatsRange) {
   renderRanking(document.querySelector("#hot-numbers"), hotNumbers, highestCount, config);
   renderRanking(document.querySelector("#cold-numbers"), coldNumbers, highestCount, config);
   renderSpecialNumbers(draws, config);
-  if (selectedGame === "daily539") renderPairAnalysis(draws);
   document.querySelector("#draw-count").textContent = draws.length.toLocaleString("zh-TW");
   document.querySelector("#date-range").textContent = `${formatDate(draws[0].draw_date)}–${formatDate(draws.at(-1).draw_date)}`;
   document.querySelector("#last-updated").textContent = formatTaipeiTime(historicalMetadata[selectedGame]?.collected_at);

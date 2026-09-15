@@ -7,8 +7,9 @@ import argparse
 import json
 import os
 import tempfile
+import urllib.error
 import urllib.request
-from datetime import datetime, time, timedelta, timezone
+from datetime import date, datetime, time, timedelta, timezone
 from pathlib import Path
 
 
@@ -44,21 +45,44 @@ def next_draw_at(now: datetime, weekdays: set[int]) -> datetime:
     raise RuntimeError("Unable to calculate next draw time")
 
 
-def expected_games(now: datetime) -> list[str]:
-    return [key for key, game in GAMES.items() if now.weekday() in game["weekdays"]]
+def expected_games(target_date: date) -> list[str]:
+    return [key for key, game in GAMES.items() if target_date.weekday() in game["weekdays"]]
 
 
-def build(latest: dict[str, object], now: datetime, attempt: int) -> dict[str, object]:
-    stale = []
-    if attempt:
-        for key in expected_games(now):
-            result = latest.get(GAMES[key]["result"])
-            draw_date = str(result.get("lotteryDate", ""))[:10] if isinstance(result, dict) else ""
-            if draw_date != now.date().isoformat():
-                stale.append(key)
-        if stale and attempt < 3:
-            names = ", ".join(GAMES[key]["name"] for key in stale)
-            raise RuntimeError(f"Attempt {attempt}: latest draw is not available for {names}")
+def validation_target_date(now: datetime) -> date:
+    return now.astimezone(TAIPEI).date() - timedelta(days=1)
+
+
+def validation_errors(latest: dict[str, object], target_date: date) -> list[str]:
+    errors = []
+    for key in expected_games(target_date):
+        game = GAMES[key]
+        result = latest.get(game["result"])
+        raw_date = result.get("lotteryDate") if isinstance(result, dict) else None
+        actual_date = str(raw_date).strip()[:10] if raw_date is not None else ""
+        if not actual_date:
+            reason = "API 日期缺漏"
+            actual_display = "未提供"
+        else:
+            try:
+                parsed_date = date.fromisoformat(actual_date)
+            except ValueError:
+                reason = "API 日期格式不合法"
+                actual_display = actual_date
+            else:
+                if parsed_date == target_date:
+                    continue
+                reason = "API 日期早於目標日期" if parsed_date < target_date else "API 日期晚於目標日期"
+                actual_display = actual_date
+        errors.append(
+            f"{game['name']}：預期日期 {target_date.isoformat()}，實際日期 {actual_display}；錯誤原因：{reason}。"
+        )
+    return errors
+
+
+def build(latest: dict[str, object], now: datetime) -> dict[str, object]:
+    target_date = validation_target_date(now)
+    errors = validation_errors(latest, target_date)
 
     jackpots = []
     for key in ("power638", "lotto649"):
@@ -71,8 +95,11 @@ def build(latest: dict[str, object], now: datetime, attempt: int) -> dict[str, o
             continue
         amount = int(assignment.get("prize") or 0) + int(assignment.get("lastPrize") or 0)
         if amount > JACKPOT_THRESHOLD:
+            game_name = game["name"]
+            if any(error.startswith(f"{game_name}：") for error in errors):
+                game_name = f"{game_name}（資訊未更新）"
             jackpots.append({
-                "game": game["name"],
+                "game": game_name,
                 "amount": amount,
                 "source_draw_no": str(result.get("period", "")),
                 "next_draw_at": next_draw_at(now, game["weekdays"]).isoformat(),
@@ -81,7 +108,39 @@ def build(latest: dict[str, object], now: datetime, attempt: int) -> dict[str, o
     return {
         "generated_at": now.isoformat(),
         "jackpots": jackpots,
-        "errors": ["本日最後一次排程更新未能確認最新資料"] if stale and attempt >= 3 else [],
+        "errors": errors,
+    }
+
+
+def preserved_jackpots(output: Path) -> list[dict[str, object]]:
+    if not output.exists():
+        return []
+    try:
+        existing = json.loads(output.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return []
+    preserved = []
+    for jackpot in existing.get("jackpots", []):
+        if not isinstance(jackpot, dict):
+            continue
+        item = dict(jackpot)
+        game = str(item.get("game", ""))
+        if "資訊未更新" not in game:
+            item["game"] = f"{game}（資訊未更新）"
+        preserved.append(item)
+    return preserved
+
+
+def api_failure_payload(now: datetime, output: Path) -> dict[str, object]:
+    target_date = validation_target_date(now)
+    errors = [
+        f"{GAMES[key]['name']}：預期日期 {target_date.isoformat()}，實際日期 未取得；錯誤原因：公告 API 請求或回傳驗證失敗。"
+        for key in expected_games(target_date)
+    ]
+    return {
+        "generated_at": now.isoformat(),
+        "jackpots": preserved_jackpots(output),
+        "errors": errors,
     }
 
 
@@ -96,20 +155,13 @@ def write_json(payload: dict[str, object], output: Path) -> None:
 
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--attempt", type=int, choices=range(4), default=0)
-    parser.add_argument("--mark-expected-failed", action="store_true")
     parser.add_argument("--output", type=Path, default=Path("data/bulletin.json"))
     args = parser.parse_args()
     now = datetime.now(TAIPEI)
-    if args.mark_expected_failed:
-        existing = json.loads(args.output.read_text(encoding="utf-8")) if args.output.exists() else {"jackpots": []}
-        payload = {
-            "generated_at": now.isoformat(),
-            "jackpots": existing.get("jackpots", []),
-            "errors": ["本日最後一次排程更新未能確認最新資料"],
-        }
-    else:
-        payload = build(fetch_latest(), now, args.attempt)
+    try:
+        payload = build(fetch_latest(), now)
+    except (OSError, TypeError, ValueError, RuntimeError, urllib.error.URLError, json.JSONDecodeError):
+        payload = api_failure_payload(now, args.output)
     write_json(payload, args.output)
 
 
