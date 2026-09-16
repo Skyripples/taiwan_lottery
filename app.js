@@ -66,21 +66,56 @@ const GAME_RULES = {
   },
   threeStar: { name: "3 星彩", rule: "百、十、個位各取 0–9 一個數字", digits: 3 },
   fourStar: { name: "4 星彩", rule: "千、百、十、個位各取 0–9 一個數字", digits: 4 },
-  bingo: { name: "BINGO BINGO 10 星", rule: "01–80 選 10 個不重複號碼", groups: [{ count: 10, max: 80 }] },
   markSix39: { name: "39 樂合彩（二合）", rule: "01–39 選 2 個不重複號碼", groups: [{ count: 2, max: 39 }] },
   markSix49: { name: "49 樂合彩（二合）", rule: "01–49 選 2 個不重複號碼", groups: [{ count: 2, max: 49 }] },
 };
+const AI_GAMES = {
+  daily539: {
+    ...HISTORICAL_GAMES.daily539,
+    pickCount: 5,
+    awards: [
+      { id: "first", label: "頭獎（中 5）", matches: 5 },
+      { id: "second", label: "二獎（中 4）", matches: 4 },
+      { id: "third", label: "三獎（中 3）", matches: 3 },
+      { id: "fourth", label: "四獎（中 2）", matches: 2 },
+    ],
+  },
+  lotto649: {
+    ...HISTORICAL_GAMES.lotto649,
+    pickCount: 6,
+    specialColumn: "special_number",
+    awards: [
+      { id: "first", label: "頭獎", matches: 6 },
+      { id: "second", label: "貳獎", matches: 5, special: true },
+      { id: "third", label: "參獎", matches: 5 },
+      { id: "fourth", label: "肆獎", matches: 4, special: true },
+      { id: "fifth", label: "伍獎", matches: 4 },
+      { id: "sixth", label: "陸獎", matches: 3, special: true },
+      { id: "seventh", label: "柒獎", matches: 2, special: true },
+      { id: "general", label: "普獎", matches: 3 },
+    ],
+  },
+  markSix39: {
+    ...HISTORICAL_GAMES.markSix39,
+    pickCount: 2,
+    awards: [{ id: "win", label: "二合（中 2）", matches: 2 }],
+  },
+  markSix49: {
+    ...HISTORICAL_GAMES.markSix49,
+    pickCount: 2,
+    awards: [{ id: "win", label: "二合（中 2）", matches: 2 }],
+  },
+};
 
 let selectedGame = null;
-let historicalDraws = [];
 const historicalDrawsByGame = {};
 const historicalDataErrors = {};
 const historicalMetadata = {};
 let selectedStatsRange = "all";
-const AI_STRATEGY_VERSION = "539-v1";
+const AI_STRATEGY_VERSION = "shared-v2";
 const AI_WARMUP_DRAWS = 120;
 let aiRenderToken = 0;
-let aiBacktestCache = { key: "", promise: null, results: null };
+const aiBacktestCache = new Map();
 let displayedAiPicks = [];
 let displayedAiBacktests = [];
 
@@ -108,7 +143,7 @@ function renderPickGroup(numbers, { label = "", secondary = false, digits = fals
 function generateNumbers() {
   const game = GAME_RULES[selectedGame];
   const result = document.querySelector("#quick-pick-result");
-  if (!game || selectedGame === "bingo") return;
+  if (!game) return;
 
   if (game.digits) {
     const digits = Array.from({ length: game.digits }, () => secureRandomInt(10));
@@ -126,13 +161,13 @@ function selectGame(gameKey) {
   selectedGame = gameKey;
   const game = GAME_RULES[gameKey];
   const hasStatistics = Boolean(HISTORICAL_GAMES[gameKey]);
-  const hasFullGamePage = gameKey === "daily539";
-  const supportsQuickPick = gameKey !== "bingo";
+  const supportsAi = Boolean(AI_GAMES[gameKey]);
+  const supportsQuickPick = true;
   document.querySelectorAll(".game-feature").forEach((element) => {
     const isQuickPick = supportsQuickPick && element.id === "quick-pick";
     const isStatistics = hasStatistics && (element.id === "game-rules" || element.id === "historical-stats" || element.classList.contains("notice"));
-    const isDailyOnly = hasFullGamePage && element.id === "ai-pick";
-    element.hidden = !(isQuickPick || isStatistics || isDailyOnly);
+    const isAi = supportsAi && element.id === "ai-pick";
+    element.hidden = !(isQuickPick || isStatistics || isAi);
   });
   document.querySelectorAll(".game-card").forEach((card) => {
     const isSelected = card.dataset.game === gameKey;
@@ -184,30 +219,31 @@ function getDrawNumbers(draw, columns = NUMBER_COLUMNS) {
   return columns.map((column) => Number(draw[column]));
 }
 
-function rankByFrequency(draws) {
-  return calculateFrequency(draws).sort((a, b) => b.count - a.count || a.number - b.number);
+function rankByFrequency(draws, config = AI_GAMES.daily539) {
+  return calculateFrequency(draws, config.min, config.max, config.columns)
+    .sort((a, b) => b.count - a.count || a.number - b.number);
 }
 
-function calculateLongestStreaks(draws) {
-  const current = Array(40).fill(0);
-  const longest = Array(40).fill(0);
+function calculateLongestStreaks(draws, config = AI_GAMES.daily539) {
+  const current = Array(config.max + 1).fill(0);
+  const longest = Array(config.max + 1).fill(0);
   draws.forEach((draw) => {
-    const drawn = new Set(getDrawNumbers(draw));
-    for (let number = 1; number <= 39; number += 1) {
+    const drawn = new Set(getDrawNumbers(draw, config.columns));
+    for (let number = config.min; number <= config.max; number += 1) {
       current[number] = drawn.has(number) ? current[number] + 1 : 0;
       longest[number] = Math.max(longest[number], current[number]);
     }
   });
-  return Array.from({ length: 39 }, (_, index) => ({ number: index + 1, streak: longest[index + 1] }))
+  return Array.from({ length: config.max - config.min + 1 }, (_, index) => ({ number: index + config.min, streak: longest[index + config.min] }))
     .sort((a, b) => b.streak - a.streak || a.number - b.number);
 }
 
-function calculateOverdue(draws) {
-  const lastSeen = Array(40).fill(-1);
-  draws.forEach((draw, drawIndex) => getDrawNumbers(draw).forEach((number) => { lastSeen[number] = drawIndex; }));
-  return Array.from({ length: 39 }, (_, index) => ({
-    number: index + 1,
-    overdue: draws.length - 1 - lastSeen[index + 1],
+function calculateOverdue(draws, config = AI_GAMES.daily539) {
+  const lastSeen = Array(config.max + 1).fill(-1);
+  draws.forEach((draw, drawIndex) => getDrawNumbers(draw, config.columns).forEach((number) => { lastSeen[number] = drawIndex; }));
+  return Array.from({ length: config.max - config.min + 1 }, (_, index) => ({
+    number: index + config.min,
+    overdue: draws.length - 1 - lastSeen[index + config.min],
   })).sort((a, b) => b.overdue - a.overdue || a.number - b.number);
 }
 
@@ -249,65 +285,70 @@ const AI_STRATEGIES = [
   { id: "weighted", title: "頻率加權組" },
 ];
 
-function buildAiContext(draws) {
-  const ranked = rankByFrequency(draws);
+function buildAiContext(draws, config) {
+  const ranked = rankByFrequency(draws, config);
   const hot = ranked.map(({ number }) => number);
   const cold = [...ranked]
     .sort((a, b) => a.count - b.count || a.number - b.number)
     .map(({ number }) => number);
-  const recentRanked = rankByFrequency(draws.slice(-60));
+  const recentRanked = rankByFrequency(draws.slice(-60), config);
   const recent = recentRanked.map(({ number }) => number);
-  const priorCounts = new Map(calculateFrequency(draws.slice(-120, -60)).map(({ number, count }) => [number, count]));
+  const priorCounts = new Map(calculateFrequency(draws.slice(-120, -60), config.min, config.max, config.columns).map(({ number, count }) => [number, count]));
   const momentum = recentRanked
     .map(({ number, count }) => ({ number, gain: count - (priorCounts.get(number) || 0) }))
     .sort((a, b) => b.gain - a.gain || a.number - b.number);
-  const streaks = calculateLongestStreaks(draws);
-  const overdue = calculateOverdue(draws);
-  const streakChoice = streaks.find(({ number }) => !hot.slice(0, 4).includes(number));
+  const streaks = calculateLongestStreaks(draws, config);
+  const overdue = calculateOverdue(draws, config);
+  const streakChoice = streaks.find(({ number }) => !hot.slice(0, config.pickCount - 1).includes(number));
   const oddHot = hot.filter((number) => number % 2 === 1);
   const evenHot = hot.filter((number) => number % 2 === 0);
-  const lowHot = hot.filter((number) => number <= 20);
-  const highHot = hot.filter((number) => number > 20);
-  const mean = draws.length * 5 / 39;
-  const neutral = [...ranked].sort((a, b) => Math.abs(a.count - mean) - Math.abs(b.count - mean) || a.number - b.number);
-  return { ranked, hot, cold, recent, momentum, streaks, overdue, streakChoice, oddHot, evenHot, lowHot, highHot, neutral };
+  const lowLimit = Math.ceil(config.max / 2);
+  const lowHot = hot.filter((number) => number <= lowLimit);
+  const highHot = hot.filter((number) => number > lowLimit);
+  return { config, ranked, hot, cold, recent, momentum, streaks, overdue, streakChoice, oddHot, evenHot, lowHot, highHot, lowLimit };
 }
 
 function selectAiStrategy(strategyId, context, random) {
-  const { ranked, hot, cold, recent, momentum, streakChoice, overdue, oddHot, evenHot, lowHot, highHot } = context;
+  const { config, ranked, hot, cold, recent, momentum, streakChoice, overdue, oddHot, evenHot, lowHot, highHot } = context;
+  const count = config.pickCount;
+  const firstGroupCount = Math.ceil(count / 2);
+  const secondGroupCount = count - firstGroupCount;
   const selections = {
-    "all-hot": () => hot.slice(0, 5),
-    "all-cold": () => cold.slice(0, 5),
-    "hot-streak": () => streakChoice ? combineUnique(hot.slice(0, 4), [streakChoice.number]).slice(0, 5) : [],
-    "recent-hot": () => recent.slice(0, 5),
-    overdue: () => overdue.slice(0, 5).map(({ number }) => number),
-    "hot-cold": () => combineUnique(hot.slice(0, 3), cold.slice(0, 2)).slice(0, 5),
-    momentum: () => momentum.slice(0, 5).map(({ number }) => number),
-    "odd-even": () => combineUnique(oddHot.slice(0, 3), evenHot.slice(0, 2)).slice(0, 5),
-    "low-high": () => combineUnique(lowHot.slice(0, 3), highHot.slice(0, 2)).slice(0, 5),
-    weighted: () => weightedPick(ranked, 5, random),
+    "all-hot": () => hot.slice(0, count),
+    "all-cold": () => cold.slice(0, count),
+    "hot-streak": () => streakChoice ? combineUnique(hot.slice(0, count - 1), [streakChoice.number]).slice(0, count) : [],
+    "recent-hot": () => recent.slice(0, count),
+    overdue: () => overdue.slice(0, count).map(({ number }) => number),
+    "hot-cold": () => combineUnique(hot.slice(0, firstGroupCount), cold.slice(0, secondGroupCount)).slice(0, count),
+    momentum: () => momentum.slice(0, count).map(({ number }) => number),
+    "odd-even": () => combineUnique(oddHot.slice(0, firstGroupCount), evenHot.slice(0, secondGroupCount)).slice(0, count),
+    "low-high": () => combineUnique(lowHot.slice(0, firstGroupCount), highHot.slice(0, secondGroupCount)).slice(0, count),
+    weighted: () => weightedPick(ranked, count, random),
   };
   return selections[strategyId] ? selections[strategyId]().sort((a, b) => a - b) : [];
 }
 
 function getAiReason(strategyId, context) {
+  const count = context.config.pickCount;
+  const firstGroupCount = Math.ceil(count / 2);
+  const secondGroupCount = count - firstGroupCount;
   const reasons = {
-    "all-hot": "選用歷年累計出現次數最高的 5 個號碼。",
-    "all-cold": "選用歷年累計出現次數最低的 5 個號碼。",
-    "hot-streak": context.streakChoice ? `4 個歷年熱門號碼，加上曾連續 ${context.streakChoice.streak} 期開出的 ${String(context.streakChoice.number).padStart(2, "0")} 號。` : "目前資料不足以建立熱門與連莊組合。",
-    "recent-hot": "選用最近 60 期中出現次數最高的 5 個號碼。",
+    "all-hot": `選用歷年累計出現次數最高的 ${count} 個號碼。`,
+    "all-cold": `選用歷年累計出現次數最低的 ${count} 個號碼。`,
+    "hot-streak": context.streakChoice ? `${count - 1} 個歷年熱門號碼，加上曾連續 ${context.streakChoice.streak} 期開出的 ${String(context.streakChoice.number).padStart(2, "0")} 號。` : "目前資料不足以建立熱門與連莊組合。",
+    "recent-hot": `選用最近 60 期中出現次數最高的 ${count} 個號碼。`,
     overdue: context.overdue[0] ? `選用目前間隔期數最長的號碼，最久的 ${String(context.overdue[0].number).padStart(2, "0")} 號已間隔 ${context.overdue[0].overdue} 期。` : "目前資料不足以計算遺漏期數。",
-    "hot-cold": "組合 3 個歷年熱門號碼與 2 個歷年冷門號碼。",
+    "hot-cold": `組合 ${firstGroupCount} 個歷年熱門號碼與 ${secondGroupCount} 個歷年冷門號碼。`,
     momentum: "比較前後各 60 期，選出近期出現次數成長最明顯的號碼。",
-    "odd-even": "依歷年熱度挑選，配置為 3 個奇數與 2 個偶數。",
-    "low-high": "依歷年熱度挑選，配置為 3 個低號（01–20）與 2 個高號（21–39）。",
+    "odd-even": `依歷年熱度挑選，配置為 ${firstGroupCount} 個奇數與 ${secondGroupCount} 個偶數。`,
+    "low-high": `依歷年熱度挑選，配置為 ${firstGroupCount} 個低號（01–${String(context.lowLimit).padStart(2, "0")}）與 ${secondGroupCount} 個高號。`,
     weighted: "依歷年出現頻率加權隨機抽取，保留變化且不重複選號。",
   };
   return reasons[strategyId];
 }
 
-function buildAiPicks(draws, randomForStrategy = () => () => secureRandomInt(1000000) / 1000000) {
-  const context = buildAiContext(draws);
+function buildAiPicks(draws, config, randomForStrategy = () => () => secureRandomInt(1000000) / 1000000) {
+  const context = buildAiContext(draws, config);
   return AI_STRATEGIES.map((strategy) => ({
     ...strategy,
     numbers: selectAiStrategy(strategy.id, context, randomForStrategy(strategy)),
@@ -335,21 +376,32 @@ function createSeededRandom(seedText) {
   };
 }
 
-function isValidAiPick(numbers) {
-  return numbers.length === 5
-    && new Set(numbers).size === 5
-    && numbers.every((number) => Number.isInteger(number) && number >= 1 && number <= 39);
+function isValidAiPick(numbers, config) {
+  return numbers.length === config.pickCount
+    && new Set(numbers).size === config.pickCount
+    && numbers.every((number) => Number.isInteger(number) && number >= config.min && number <= config.max);
 }
 
-function getAiDataKey(draws) {
+function getAiDataKey(draws, gameKey, config) {
   let hash = 2166136261;
   draws.forEach((draw) => {
-    hash = hashText(`${draw.draw_date}|${draw.draw_no}|${getDrawNumbers(draw).join(",")};`, hash);
+    const specialNumber = config.specialColumn ? draw[config.specialColumn] : "";
+    hash = hashText(`${draw.draw_date}|${draw.draw_no}|${getDrawNumbers(draw, config.columns).join(",")}|${specialNumber};`, hash);
   });
-  return `${AI_STRATEGY_VERSION}:${draws.length}:${hash}`;
+  return `${AI_STRATEGY_VERSION}:${gameKey}:${draws.length}:${hash}`;
 }
 
-async function calculateAiBacktests(draws) {
+function classifyAiAward(numbers, draw, config) {
+  const actualNumbers = new Set(getDrawNumbers(draw, config.columns));
+  const matches = numbers.filter((number) => actualNumbers.has(number)).length;
+  const specialMatched = config.specialColumn
+    ? numbers.includes(Number(draw[config.specialColumn]))
+    : false;
+  return config.awards.find((award) =>
+    award.matches === matches && (award.special === undefined || award.special === specialMatched));
+}
+
+async function calculateAiBacktests(draws, gameKey, config) {
   const sortedDraws = getDrawsForStatsRange(draws, "all");
   const targets = sortedDraws.slice(AI_WARMUP_DRAWS);
   const results = AI_STRATEGIES.map((strategy) => ({
@@ -358,10 +410,7 @@ async function calculateAiBacktests(draws) {
     endDate: targets.at(-1)?.draw_date || "",
     effective: 0,
     skipped: 0,
-    hit5: 0,
-    hit4: 0,
-    hit3: 0,
-    hit2: 0,
+    awards: config.awards.map((award) => ({ ...award, count: 0 })),
     noPrize: 0,
   }));
 
@@ -369,19 +418,18 @@ async function calculateAiBacktests(draws) {
     const pastDraws = sortedDraws.slice(0, targetIndex);
     const targetDraw = sortedDraws[targetIndex];
     const targetId = `${targetDraw.draw_date}|${targetDraw.draw_no}`;
-    const picks = buildAiPicks(pastDraws, (strategy) =>
-      createSeededRandom(`${AI_STRATEGY_VERSION}|${strategy.id}|${targetId}`));
-    const actualNumbers = new Set(getDrawNumbers(targetDraw));
+    const picks = buildAiPicks(pastDraws, config, (strategy) =>
+      createSeededRandom(`${AI_STRATEGY_VERSION}|${gameKey}|${strategy.id}|${targetId}`));
 
     picks.forEach((pick, strategyIndex) => {
       const result = results[strategyIndex];
-      if (!isValidAiPick(pick.numbers)) {
+      if (!isValidAiPick(pick.numbers, config)) {
         result.skipped += 1;
         return;
       }
       result.effective += 1;
-      const matches = pick.numbers.filter((number) => actualNumbers.has(number)).length;
-      if (matches >= 2) result[`hit${matches}`] += 1;
+      const award = classifyAiAward(pick.numbers, targetDraw, config);
+      if (award) result.awards.find(({ id }) => id === award.id).count += 1;
       else result.noPrize += 1;
     });
 
@@ -392,23 +440,23 @@ async function calculateAiBacktests(draws) {
   return results;
 }
 
-function getAiBacktests(draws) {
-  const key = getAiDataKey(draws);
-  if (aiBacktestCache.key === key) {
-    if (aiBacktestCache.results) return Promise.resolve(aiBacktestCache.results);
-    if (aiBacktestCache.promise) return aiBacktestCache.promise;
-  }
-  const promise = calculateAiBacktests(draws).then((results) => {
-    if (aiBacktestCache.key === key) aiBacktestCache.results = results;
+function getAiBacktests(draws, gameKey, config) {
+  const key = getAiDataKey(draws, gameKey, config);
+  const cached = aiBacktestCache.get(key);
+  if (cached?.results) return Promise.resolve(cached.results);
+  if (cached?.promise) return cached.promise;
+  const entry = { promise: null, results: null };
+  entry.promise = calculateAiBacktests(draws, gameKey, config).then((results) => {
+    entry.results = results;
     return results;
   });
-  aiBacktestCache = { key, promise, results: null };
-  return promise;
+  aiBacktestCache.set(key, entry);
+  return entry.promise;
 }
 
 function renderAiBacktest(backtest) {
-  const winningPeriods = backtest.hit5 + backtest.hit4 + backtest.hit3 + backtest.hit2;
-  const winningRate = backtest.effective ? winningPeriods / backtest.effective * 100 : 0;
+  const totalWinningPeriods = winningPeriods(backtest);
+  const winningRate = backtest.effective ? totalWinningPeriods / backtest.effective * 100 : 0;
   const dateRange = backtest.startDate && backtest.endDate
     ? `${formatDate(backtest.startDate)}–${formatDate(backtest.endDate)}`
     : "—";
@@ -419,11 +467,8 @@ function renderAiBacktest(backtest) {
         <div><dt>回測日期範圍</dt><dd>${dateRange}</dd></div>
         <div><dt>有效期數</dt><dd>${backtest.effective.toLocaleString("zh-TW")}</dd></div>
         <div><dt>略過期數</dt><dd>${backtest.skipped.toLocaleString("zh-TW")}</dd></div>
-        <div><dt>頭獎（中 5）</dt><dd>${backtest.hit5.toLocaleString("zh-TW")}</dd></div>
-        <div><dt>二獎（中 4）</dt><dd>${backtest.hit4.toLocaleString("zh-TW")}</dd></div>
-        <div><dt>三獎（中 3）</dt><dd>${backtest.hit3.toLocaleString("zh-TW")}</dd></div>
-        <div><dt>四獎（中 2）</dt><dd>${backtest.hit2.toLocaleString("zh-TW")}</dd></div>
-        <div><dt>未中獎（中 0 或 1）</dt><dd>${backtest.noPrize.toLocaleString("zh-TW")}</dd></div>
+        ${backtest.awards.map((award) => `<div><dt>${award.label}</dt><dd>${award.count.toLocaleString("zh-TW")}</dd></div>`).join("")}
+        <div><dt>未中獎</dt><dd>${backtest.noPrize.toLocaleString("zh-TW")}</dd></div>
         <div><dt>中獎率</dt><dd>${winningRate.toFixed(2)}%</dd></div>
       </dl>
       <p>歷史規則回測，不代表事前預測紀錄或未來保證。</p>
@@ -446,7 +491,7 @@ function renderAiPicks(picks, backtests = null) {
 }
 
 function winningPeriods(backtest) {
-  return backtest.hit5 + backtest.hit4 + backtest.hit3 + backtest.hit2;
+  return backtest.awards.reduce((total, award) => total + award.count, 0);
 }
 
 function renderSortedAiBacktests() {
@@ -476,21 +521,26 @@ function renderSortedAiBacktests() {
 
 function updateAiAvailability() {
   const button = document.querySelector("#generate-ai-picks");
-  const supportsAi = selectedGame === "daily539";
-  button.disabled = !supportsAi || !historicalDraws.length;
+  const supportsAi = Boolean(AI_GAMES[selectedGame]);
+  button.disabled = !supportsAi || !(historicalDrawsByGame[selectedGame] || []).length;
 }
 
 function showAiRecommendations() {
-  if (selectedGame !== "daily539" || !historicalDraws.length) return;
-  displayedAiPicks = buildAiPicks(historicalDraws);
+  const config = AI_GAMES[selectedGame];
+  const draws = historicalDrawsByGame[selectedGame] || [];
+  if (!config || !draws.length) return;
+  displayedAiPicks = buildAiPicks(draws, config);
   renderAiPicks(displayedAiPicks);
 }
 
 async function runAiBacktests() {
-  if (selectedGame !== "daily539" || !historicalDraws.length) return;
+  const gameKey = selectedGame;
+  const config = AI_GAMES[gameKey];
+  const draws = historicalDrawsByGame[gameKey] || [];
+  if (!config || !draws.length) return;
   const token = ++aiRenderToken;
   const button = document.querySelector("#generate-ai-picks");
-  const picks = displayedAiPicks.length ? displayedAiPicks : buildAiPicks(historicalDraws);
+  const picks = displayedAiPicks.length ? displayedAiPicks : buildAiPicks(draws, config);
   displayedAiPicks = picks;
   displayedAiBacktests = [];
   document.querySelector("#ai-sort-controls").hidden = true;
@@ -499,14 +549,14 @@ async function runAiBacktests() {
   button.textContent = "回測計算中…";
   document.querySelector("#ai-pick").scrollIntoView({ behavior: "smooth", block: "start" });
   try {
-    const backtests = await getAiBacktests(historicalDraws);
-    if (token === aiRenderToken && selectedGame === "daily539") {
+    const backtests = await getAiBacktests(draws, gameKey, config);
+    if (token === aiRenderToken && selectedGame === gameKey) {
       displayedAiBacktests = backtests;
       document.querySelector("#ai-sort-controls").hidden = false;
       renderSortedAiBacktests();
     }
   } finally {
-    if (token === aiRenderToken && selectedGame === "daily539") {
+    if (token === aiRenderToken && selectedGame === gameKey) {
       button.textContent = "歷史回測";
       updateAiAvailability();
     }
@@ -709,7 +759,6 @@ async function loadStatistics() {
       if (!draws.length) throw new Error("歷史資料目前為空");
       historicalDrawsByGame[gameKey] = draws;
       historicalMetadata[gameKey] = metadata;
-      if (gameKey === "daily539") historicalDraws = draws;
     } catch (error) {
       historicalDataErrors[gameKey] = `${error.message}，請稍後再試。`;
     }
