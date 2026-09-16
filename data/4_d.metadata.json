@@ -2,8 +2,8 @@
   "game": "4星彩",
   "source": "Taiwan Lottery official annual downloads and recent-results API",
   "source_url": "https://www.taiwanlottery.com/lotto/history/result_download/",
-  "collected_at": "2026-09-15T19:26:12+00:00",
-  "row_count": 5968,
+  "collected_at": "2026-09-16T19:18:03+00:00",
+  "row_count": 5969,
   "first_draw_date": "2007-01-01",
-  "last_draw_date": "2026-09-15"
+  "last_draw_date": "2026-09-16"
 }
