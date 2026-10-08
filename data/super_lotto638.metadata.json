@@ -2,8 +2,8 @@
   "game": "威力彩",
   "source": "Taiwan Lottery official annual downloads and recent-results API",
   "source_url": "https://www.taiwanlottery.com/lotto/history/result_download/",
-  "collected_at": "2026-10-07T20:56:51+00:00",
-  "row_count": 1952,
+  "collected_at": "2026-10-08T20:58:39+00:00",
+  "row_count": 1953,
   "first_draw_date": "2008-01-24",
-  "last_draw_date": "2026-10-05"
+  "last_draw_date": "2026-10-08"
 }
