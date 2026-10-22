@@ -2,7 +2,7 @@
   "game": "大樂透",
   "source": "Taiwan Lottery official annual downloads and recent-results API",
   "source_url": "https://www.taiwanlottery.com/lotto/history/result_download/",
-  "collected_at": "2026-10-21T19:52:46+00:00",
+  "collected_at": "2026-10-22T19:41:04+00:00",
   "row_count": 2180,
   "first_draw_date": "2007-01-02",
   "last_draw_date": "2026-10-20"
