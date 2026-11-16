@@ -2,8 +2,8 @@
   "game": "39樂合彩",
   "source": "Taiwan Lottery official annual downloads and recent-results API",
   "source_url": "https://www.taiwanlottery.com/lotto/history/result_download/",
-  "collected_at": "2026-11-15T20:43:12+00:00",
-  "row_count": 5060,
+  "collected_at": "2026-11-16T23:56:47+00:00",
+  "row_count": 5061,
   "first_draw_date": "2010-09-06",
-  "last_draw_date": "2026-11-14"
+  "last_draw_date": "2026-11-16"
 }
